@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.7.0",
-  "mcp_min_version": "0.7.0",
+  "latest_version": "0.8.0",
+  "mcp_min_version": "0.8.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "8cd3aa921cd3cc4b9d24e12dae81dc27eb79a107488c5905390b39525c38337a",
-  "release_notes": "发布 RentPro 租房顾问 Skill 0.7.0：支持默认轻量挂牌展示、客户详情链接和自然语言流程兜底。"
+  "sha256": "89c625a9919fc79b5659115ed19d2493b311d0beea30ddba3c12700a8a22d2a8",
+  "release_notes": "发布 RentPro 租房顾问 Skill 0.8.0：增加命中楼盘聚合、首个楼盘全量挂牌展示和客户侧列表格式收口。"
 }
