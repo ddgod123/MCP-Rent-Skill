@@ -7,6 +7,6 @@
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "a39913cd0be1da7aac09326914f5755549192eac7b322565015da3dcdf383326",
-  "release_notes": "公开仓库更名为 MCP-Rent-Skill，RentPro 租房顾问 Skill 版本保持 0.6.0。"
+  "sha256": "5e42ba44b0ea6cdfc0489a1d3953c1850fb55019e5bf54f15f1c719a8b8ae2dd",
+  "release_notes": "优化租房需求填写模板，改用宿主兼容的纯文本必填标识，避免 Markdown 特殊符号导致显示异常。"
 }
