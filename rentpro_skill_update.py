@@ -24,7 +24,7 @@ from urllib.request import Request, urlopen
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent if SCRIPT_DIR.name == "scripts" else SCRIPT_DIR
 REPO_OWNER = "ddgod123"
-REPO_NAME = "MCP-Rent-Skill-"
+REPO_NAME = "MCP-Rent-Skill"
 SKILL_NAME = "rentpro-rent"
 REMOTE_SKILL_RELATIVE_PATH = "SKILL.md"
 PROJECT_SKILL_RELATIVE_PATH = "skills/rentpro-rent/SKILL.md"

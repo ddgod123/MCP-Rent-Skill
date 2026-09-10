@@ -18,8 +18,8 @@ http://127.0.0.1:8091/mcp
 然后执行：
 
 ```bash
-git clone https://github.com/ddgod123/MCP-Rent-Skill-.git
-cd MCP-Rent-Skill-
+git clone https://github.com/ddgod123/MCP-Rent-Skill.git
+cd MCP-Rent-Skill
 python3 rentpro_skill_update.py install
 ```
 

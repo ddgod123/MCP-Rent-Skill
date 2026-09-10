@@ -6,7 +6,7 @@
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
-  "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill-/contents/SKILL.md?ref=main",
+  "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
   "sha256": "a39913cd0be1da7aac09326914f5755549192eac7b322565015da3dcdf383326",
-  "release_notes": "首次公开发布 RentPro 租房顾问 Skill，支持版本检查、用户确认后的 GitHub 更新和 WorkBuddy 刷新流程。"
+  "release_notes": "公开仓库更名为 MCP-Rent-Skill，RentPro 租房顾问 Skill 版本保持 0.6.0。"
 }
