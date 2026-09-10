@@ -7,6 +7,6 @@
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "89c625a9919fc79b5659115ed19d2493b311d0beea30ddba3c12700a8a22d2a8",
+  "sha256": "d73dddc9b035edcd9c0a9f4b4af529e5a23d63f5d585712592c5a4d6c5210276",
   "release_notes": "发布 RentPro 租房顾问 Skill 0.8.0：增加命中楼盘聚合、首个楼盘全量挂牌展示和客户侧列表格式收口。"
 }
