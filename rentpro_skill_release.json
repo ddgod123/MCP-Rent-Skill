@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.6.0",
-  "mcp_min_version": "0.6.0",
+  "latest_version": "0.7.0",
+  "mcp_min_version": "0.7.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "5e42ba44b0ea6cdfc0489a1d3953c1850fb55019e5bf54f15f1c719a8b8ae2dd",
-  "release_notes": "优化租房需求填写模板，改用宿主兼容的纯文本必填标识，避免 Markdown 特殊符号导致显示异常。"
+  "sha256": "8cd3aa921cd3cc4b9d24e12dae81dc27eb79a107488c5905390b39525c38337a",
+  "release_notes": "发布 RentPro 租房顾问 Skill 0.7.0：支持默认轻量挂牌展示、客户详情链接和自然语言流程兜底。"
 }
