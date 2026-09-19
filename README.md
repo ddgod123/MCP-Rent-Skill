@@ -27,10 +27,15 @@ python3 rentpro_skill_update.py install
 
 ```text
 ~/.workbuddy/skills/rentpro-rent/SKILL.md
+~/.workbuddy/skills/rentpro-rent/references/tool-routing.md
+~/.workbuddy/skills/rentpro-rent/references/response-format.md
 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py
 ```
 
 安装完成后刷新 Skill 或重启 WorkBuddy。
+
+从旧版单文件更新器迁移到 schema v2 时，先执行一次上述项目安装；
+旧更新器不能直接解析 v2 manifest。
 
 ## 检查更新
 
@@ -69,6 +74,7 @@ python3 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py update --yes
 
 ```text
 SKILL.md                    宿主行为指令
+references/                 按需读取的工具路由与客户回复规范
 rentpro_skill_update.py     检查、安装和更新脚本
 rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ```
@@ -77,13 +83,16 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 
 - `SKILL.md` 使用 `X.Y.Z` 版本号。
 - `mcp_min_version` 表示兼容所需的最低 MCP 版本。
-- manifest 的 `sha256` 必须与公开仓库中的 `SKILL.md` 完全一致。
+- schema v2 manifest 的 `files[*].sha256` 必须分别与公开仓库中的每个文件完全一致；
+  `SKILL.md` 的兼容字段 `sha256` 仍保留。
 - 正式稳定发布时，应将 `source_ref` 和下载地址切换到不可变 Git tag 或 Release。
+- WorkBuddy 需要安装完整多文件包才能使用 references；只复制 `SKILL.md` 的旧安装
+  仍可运行主流程，但不会具备 references 中的完整细则。
 
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.10.0
+Skill: rentpro-rent 0.10.1
 最低 MCP: 0.9.0
 更新通道: beta
 ```

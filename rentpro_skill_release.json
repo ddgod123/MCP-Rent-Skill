@@ -1,12 +1,38 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.10.0",
+  "latest_version": "0.10.1",
   "mcp_min_version": "0.9.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "e9ab76a1655e9415175b8472b18217799233c5499051ee27ea0ed4ece1986d80",
-  "release_notes": "发布 0.10.0：需求模板改为服务端目录驱动（basic_catalog / show_in_intake / search_role）；新增菜单分流与「菜单」全局回指；深度筛选改为整组替换合并；新增 property_url 客户楼盘资料页；补充缺失提示与展示边界条款。"
+  "sha256": "0732c21989f45f94aab57ad43a21a87be30d84450b759e8feb050e18182bfee1",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "role": "skill",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
+      "sha256": "0732c21989f45f94aab57ad43a21a87be30d84450b759e8feb050e18182bfee1"
+    },
+    {
+      "path": "references/response-format.md",
+      "role": "reference",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=main",
+      "sha256": "3523a5b1207d0f7a9ab905d6beb8b5fc6fbb2ae7c9069ea985cdcc0058132d36"
+    },
+    {
+      "path": "references/tool-routing.md",
+      "role": "reference",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
+      "sha256": "1bb6557ca39999befdfa67b89672d0063680fc5705a59f76379c4a4e16ebbd3c"
+    },
+    {
+      "path": "rentpro_skill_update.py",
+      "role": "updater",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=main",
+      "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
+    }
+  ],
+  "release_notes": "0.10.1：拆分按需 references，升级 schema v2 多文件发布与 WorkBuddy 安装校验。"
 }

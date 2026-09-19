@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check and update the RentPro WorkBuddy Skill from the fixed GitHub repository."""
+"""Check, install and update the RentPro WorkBuddy Skill package."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -32,9 +32,7 @@ DEFAULT_MANIFEST_URL = (
     f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
     "rentpro_skill_release.json?ref=main"
 )
-DEFAULT_LOCAL_SKILL = (
-    Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
-)
+DEFAULT_LOCAL_SKILL = Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
 PROJECT_SKILL_CANDIDATES = (
     ROOT / PROJECT_SKILL_RELATIVE_PATH,
     ROOT / REMOTE_SKILL_RELATIVE_PATH,
@@ -56,6 +54,14 @@ class UpdateError(RuntimeError):
 class SkillMetadata:
     name: str | None
     version: str | None
+
+
+@dataclass(frozen=True)
+class ManifestFile:
+    path: str
+    role: str
+    download_url: str
+    sha256: str
 
 
 def parse_version(value: str) -> tuple[int, int, int]:
@@ -147,7 +153,7 @@ def fetch_url(url: str, token: str | None, timeout: float) -> bytes:
         url,
         headers={
             "Accept": "application/vnd.github.raw+json",
-            "User-Agent": "rentpro-skill-updater/1.0",
+            "User-Agent": "rentpro-skill-updater/2.0",
         },
     )
     if token:
@@ -158,7 +164,7 @@ def fetch_url(url: str, token: str | None, timeout: float) -> bytes:
     except HTTPError as exc:
         if exc.code in {401, 403, 404}:
             raise UpdateError(
-                "无法读取 GitHub Skill manifest。仓库可能是私有仓库，"
+                "无法读取 GitHub manifest 或 Skill 文件。仓库可能是私有仓库，"
                 "请先配置 GITHUB_TOKEN 或执行 `gh auth login`。"
             ) from exc
         raise UpdateError(f"GitHub 请求失败：HTTP {exc.code}") from exc
@@ -183,6 +189,104 @@ def decode_github_content(content: bytes) -> bytes:
         raise UpdateError("GitHub 内容编码无效") from exc
 
 
+def safe_relative_path(value: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise UpdateError("manifest 文件路径必须是非空字符串")
+    if "\\" in value or value.startswith("/"):
+        raise UpdateError(f"manifest 文件路径不安全：{value!r}")
+    path = PurePosixPath(value)
+    if any(part in {"", ".", ".."} for part in path.parts):
+        raise UpdateError(f"manifest 文件路径不安全：{value!r}")
+    normalized = str(path)
+    if normalized != value:
+        raise UpdateError(f"manifest 文件路径必须使用规范相对路径：{value!r}")
+    return normalized
+
+
+def github_file_url(path: str, source_ref: str) -> str:
+    encoded_path = quote(path, safe="/")
+    return (
+        f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
+        f"{encoded_path}?ref={quote(source_ref, safe='')}"
+    )
+
+
+def _manifest_file(
+    raw: dict,
+    *,
+    source_ref: str,
+    default_role: str,
+) -> ManifestFile:
+    path = safe_relative_path(raw.get("path"))
+    digest = raw.get("sha256")
+    if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+        raise UpdateError(f"manifest 文件 {path!r} 缺少有效的 64 位 SHA-256")
+    url = raw.get("download_url") or github_file_url(path, source_ref)
+    if not isinstance(url, str) or not url:
+        raise UpdateError(f"manifest 文件 {path!r} 缺少 download_url")
+    validate_github_url(url)
+    role = raw.get("role", default_role)
+    if not isinstance(role, str) or not role:
+        role = default_role
+    return ManifestFile(path, role, url, digest.lower())
+
+
+def manifest_files(manifest: dict) -> list[ManifestFile]:
+    source_ref = manifest.get("source_ref", "main")
+    if not isinstance(source_ref, str) or not source_ref:
+        raise UpdateError("manifest 的 source_ref 无效")
+
+    schema_version = manifest.get("schema_version", 1)
+    if schema_version == 1:
+        path = manifest.get("skill_path", REMOTE_SKILL_RELATIVE_PATH)
+        digest = manifest.get("sha256")
+        url = manifest.get("download_url")
+        if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+            raise UpdateError("schema v1 manifest 缺少有效的 64 位 SHA-256")
+        if not isinstance(url, str) or not url:
+            url = github_file_url(path, source_ref)
+        return [
+            _manifest_file(
+                {
+                    "path": path,
+                    "role": "skill",
+                    "download_url": url,
+                    "sha256": digest,
+                },
+                source_ref=source_ref,
+                default_role="skill",
+            )
+        ]
+
+    if schema_version != 2:
+        raise UpdateError(f"不支持的 manifest schema_version：{schema_version!r}")
+    raw_files = manifest.get("files")
+    if not isinstance(raw_files, list) or not raw_files:
+        raise UpdateError("schema v2 manifest 必须包含非空 files 数组")
+
+    result: list[ManifestFile] = []
+    seen: set[str] = set()
+    for raw in raw_files:
+        if not isinstance(raw, dict):
+            raise UpdateError("manifest files 数组中的每一项必须是对象")
+        item = _manifest_file(
+            raw,
+            source_ref=source_ref,
+            default_role="resource",
+        )
+        if item.path in seen:
+            raise UpdateError(f"manifest files 存在重复路径：{item.path}")
+        seen.add(item.path)
+        result.append(item)
+
+    skill_paths = [
+        item.path for item in result if item.role == "skill" or item.path == "SKILL.md"
+    ]
+    if skill_paths != ["SKILL.md"]:
+        raise UpdateError("schema v2 manifest 必须且只能包含路径为 SKILL.md 的 skill 文件")
+    return result
+
+
 def load_manifest(url: str, timeout: float) -> dict:
     token = _github_token()
     raw = decode_github_content(fetch_url(url, token, timeout))
@@ -192,7 +296,6 @@ def load_manifest(url: str, timeout: float) -> dict:
         raise UpdateError("GitHub manifest 不是有效 JSON") from exc
     if not isinstance(manifest, dict):
         raise UpdateError("GitHub manifest 顶层必须是对象")
-
     if manifest.get("skill_name") != SKILL_NAME:
         raise UpdateError(
             f"manifest 的 skill_name 必须是 {SKILL_NAME!r}，"
@@ -202,25 +305,16 @@ def load_manifest(url: str, timeout: float) -> dict:
     if not isinstance(latest_version, str):
         raise UpdateError("manifest 缺少 latest_version")
     parse_version(latest_version)
-    if manifest.get("skill_path") != REMOTE_SKILL_RELATIVE_PATH:
-        raise UpdateError(
-            f"manifest 的 skill_path 必须是 {REMOTE_SKILL_RELATIVE_PATH!r}"
-        )
-    digest = manifest.get("sha256")
-    if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
-        raise UpdateError("manifest 缺少有效的 64 位 SHA-256")
-    skill_url = manifest.get("download_url")
-    if not isinstance(skill_url, str) or not skill_url:
-        source_ref = manifest.get("source_ref", "main")
-        skill_url = (
-            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
-            f"{REMOTE_SKILL_RELATIVE_PATH}?ref={source_ref}"
-        )
-        manifest["download_url"] = skill_url
-    validate_github_url(skill_url)
+    files = manifest_files(manifest)
+    manifest["_files"] = files
     manifest["latest_version"] = latest_version.lstrip("vV")
-    manifest["sha256"] = digest.lower()
     return manifest
+
+
+def destination_for(local_skill: Path, relative_path: str) -> Path:
+    if relative_path == REMOTE_SKILL_RELATIVE_PATH:
+        return local_skill
+    return local_skill.parent / Path(*PurePosixPath(relative_path).parts)
 
 
 def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
@@ -231,12 +325,31 @@ def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
     latest_version = manifest["latest_version"]
     latest_tuple = parse_version(latest_version)
 
-    if not local_path.exists():
+    file_statuses = []
+    all_match = True
+    for item in manifest["_files"]:
+        path = destination_for(local_path, item.path)
+        digest = sha256_bytes(path.read_bytes()) if path.exists() else None
+        matches = digest == item.sha256
+        all_match = all_match and matches
+        file_statuses.append(
+            {
+                "path": item.path,
+                "local_path": str(path),
+                "exists": path.exists(),
+                "local_sha256": digest,
+                "latest_sha256": item.sha256,
+                "matches": matches,
+                "role": item.role,
+            }
+        )
+
+    if all_match:
+        update_available = False
+        reason = "本地 Skill 包所有文件与远端 SHA-256 一致"
+    elif not local_path.exists():
         update_available = True
         reason = "本地尚未安装"
-    elif local_digest == manifest["sha256"]:
-        update_available = False
-        reason = "本地文件与远端 SHA-256 一致"
     elif not local_version:
         update_available = True
         reason = "本地 Skill 没有版本号或版本号无法读取"
@@ -247,11 +360,12 @@ def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
             reason = "远端版本更高"
         elif latest_tuple == local_tuple:
             update_available = True
-            reason = "版本号相同但文件内容不同，需要重新同步"
+            reason = "版本号相同但 Skill 包内容不同，需要重新同步"
         else:
             update_available = False
             reason = "本地版本高于远端 manifest，未自动降级"
 
+    skill_item = next(item for item in manifest["_files"] if item.path == "SKILL.md")
     return {
         "skill_name": SKILL_NAME,
         "local_path": str(local_path),
@@ -260,13 +374,15 @@ def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
         "local_version": local_version,
         "local_sha256": local_digest,
         "latest_version": latest_version,
-        "latest_sha256": manifest["sha256"],
+        "latest_sha256": skill_item.sha256,
+        "manifest_schema_version": manifest.get("schema_version", 1),
+        "files": file_statuses,
         "mcp_min_version": manifest.get("mcp_min_version"),
         "update_channel": manifest.get("update_channel", "stable"),
         "update_available": update_available,
         "reason": reason,
         "manifest_url": manifest_url,
-        "download_url": manifest["download_url"],
+        "download_url": skill_item.download_url,
         "release_notes": manifest.get("release_notes", ""),
         "_manifest": manifest,
     }
@@ -281,8 +397,12 @@ def print_status(status: dict, as_json: bool) -> None:
     print("RentPro Skill 更新检查")
     print(f"本地版本：{status['local_version'] or '未安装/未知'}")
     print(f"远端版本：{status['latest_version']}")
+    print(f"manifest schema：{status['manifest_schema_version']}")
     print(f"检查结果：{'发现更新' if status['update_available'] else '已是最新或本地更高'}")
     print(f"原因：{status['reason']}")
+    mismatches = [item["path"] for item in status["files"] if not item["matches"]]
+    if mismatches:
+        print(f"待同步文件：{', '.join(mismatches)}")
     if status["release_notes"]:
         print(f"更新说明：{status['release_notes']}")
     if status["update_available"]:
@@ -313,26 +433,68 @@ def atomic_write(path: Path, content: bytes, mode: int = 0o644) -> None:
 def backup_path(path: Path) -> Path | None:
     if not path.exists():
         return None
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     destination = path.with_name(f"{path.name}.backup-{stamp}")
     shutil.copy2(path, destination)
     return destination
+
+
+def _file_mode(path: Path, role: str) -> int:
+    if path.exists():
+        return stat.S_IMODE(path.stat().st_mode)
+    return 0o755 if role == "updater" else 0o644
+
+
+def _backup_label(backups: list[Path]) -> Path | list[Path] | None:
+    if not backups:
+        return None
+    return backups[0] if len(backups) == 1 else backups
+
+
+def _restore_written(written: list[Path], backups: list[Path]) -> None:
+    for destination in reversed(written):
+        matching = [
+            backup
+            for backup in backups
+            if backup.name.startswith(f"{destination.name}.backup-")
+        ]
+        if matching:
+            try:
+                atomic_write(
+                    destination,
+                    matching[-1].read_bytes(),
+                    stat.S_IMODE(matching[-1].stat().st_mode),
+                )
+            except OSError:
+                pass
+        elif destination.exists():
+            try:
+                destination.unlink()
+            except OSError:
+                pass
 
 
 def update_installed_skill(
     local_path: Path,
     manifest: dict,
     timeout: float,
-) -> Path | None:
+) -> Path | list[Path] | None:
     token = _github_token()
-    content = decode_github_content(fetch_url(manifest["download_url"], token, timeout))
-    actual_digest = sha256_bytes(content)
-    if actual_digest != manifest["sha256"]:
-        raise UpdateError(
-            "下载文件 SHA-256 校验失败，已中止更新；"
-            f"期望 {manifest['sha256']}，实际 {actual_digest}"
-        )
-    metadata = read_skill_metadata(content)
+    downloaded: dict[str, tuple[ManifestFile, bytes]] = {}
+
+    # Download and validate every file before changing the local installation.
+    for item in manifest.get("_files") or manifest_files(manifest):
+        content = decode_github_content(fetch_url(item.download_url, token, timeout))
+        actual_digest = sha256_bytes(content)
+        if actual_digest != item.sha256:
+            raise UpdateError(
+                f"下载文件 {item.path} SHA-256 校验失败，已中止更新；"
+                f"期望 {item.sha256}，实际 {actual_digest}"
+            )
+        downloaded[item.path] = (item, content)
+
+    skill_content = downloaded["SKILL.md"][1]
+    metadata = read_skill_metadata(skill_content)
     if metadata.name != SKILL_NAME:
         raise UpdateError(
             f"下载的 Skill name 不正确：{metadata.name!r}，期望 {SKILL_NAME!r}"
@@ -345,13 +507,39 @@ def update_installed_skill(
             f"{manifest['latest_version']} 不一致"
         )
 
-    mode = stat.S_IMODE(local_path.stat().st_mode) if local_path.exists() else 0o644
-    previous = backup_path(local_path)
-    atomic_write(local_path, content, mode)
-    return previous
+    backups: list[Path] = []
+    written: list[Path] = []
+    try:
+        for relative_path, (item, content) in downloaded.items():
+            destination = destination_for(local_path, relative_path)
+            previous = backup_path(destination)
+            if previous:
+                backups.append(previous)
+            atomic_write(destination, content, _file_mode(destination, item.role))
+            written.append(destination)
+    except (OSError, UpdateError) as exc:
+        _restore_written(written, backups)
+        raise UpdateError(f"本地 Skill 包写入失败，已尽量回滚：{exc}") from exc
+    return _backup_label(backups)
 
 
-def install_from_project(local_path: Path, update_script_path: Path) -> None:
+def _project_payload(source_dir: Path) -> list[tuple[str, Path, str]]:
+    payload: list[tuple[str, Path, str]] = [
+        ("SKILL.md", source_dir / "SKILL.md", "skill"),
+    ]
+    references = source_dir / "references"
+    if references.is_dir():
+        for source in sorted(references.glob("*.md")):
+            if source.name == "README.md":
+                continue
+            payload.append((f"references/{source.name}", source, "reference"))
+    manifest = source_dir / "rentpro_skill_release.json"
+    if manifest.exists():
+        payload.append(("rentpro_skill_release.json", manifest, "manifest"))
+    return payload
+
+
+def install_from_project(local_path: Path, update_script_path: Path) -> list[Path]:
     source = next(
         (candidate for candidate in PROJECT_SKILL_CANDIDATES if candidate.exists()),
         None,
@@ -359,19 +547,49 @@ def install_from_project(local_path: Path, update_script_path: Path) -> None:
     if source is None:
         candidates = "、".join(str(candidate) for candidate in PROJECT_SKILL_CANDIDATES)
         raise UpdateError(f"项目 Skill 不存在，已检查：{candidates}")
-    content = source.read_bytes()
-    metadata = read_skill_metadata(content)
+    source_dir = source.parent
+    metadata = read_skill_metadata(source.read_bytes())
     if metadata.name != SKILL_NAME or not metadata.version:
         raise UpdateError("项目 Skill 缺少正确的 name/version 元数据")
-    previous = backup_path(local_path)
-    mode = stat.S_IMODE(local_path.stat().st_mode) if local_path.exists() else 0o644
-    atomic_write(local_path, content, mode)
-    atomic_write(update_script_path, Path(__file__).read_bytes(), 0o755)
-    print(f"已安装 Skill：{local_path}")
-    print(f"已安装更新器：{update_script_path}")
-    if previous:
-        print(f"旧 Skill 已备份：{previous}")
+
+    targets: list[tuple[Path, Path, str]] = []
+    for relative_path, project_file, role in _project_payload(source_dir):
+        if not project_file.exists():
+            continue
+        destination = (
+            local_path
+            if relative_path == "SKILL.md"
+            else local_path.parent / Path(*PurePosixPath(relative_path).parts)
+        )
+        targets.append((project_file, destination, role))
+    targets.append((Path(__file__), update_script_path, "updater"))
+
+    backups: list[Path] = []
+    written: list[Path] = []
+    try:
+        for source_file, destination, role in targets:
+            previous = backup_path(destination)
+            if previous:
+                backups.append(previous)
+            atomic_write(
+                destination,
+                source_file.read_bytes(),
+                _file_mode(destination, role),
+            )
+            written.append(destination)
+    except (OSError, UpdateError) as exc:
+        _restore_written(written, backups)
+        raise UpdateError(f"项目 Skill 安装失败，已尽量回滚：{exc}") from exc
+
+    print(f"已安装 RentPro Skill 包到：{local_path.parent}")
+    for _, destination, _ in targets:
+        print(f"  - {destination}")
+    if backups:
+        print("旧文件已备份：")
+        for backup in backups:
+            print(f"  - {backup}")
     print("请刷新或重启 WorkBuddy 以加载新 Skill。")
+    return backups
 
 
 def command_check(args: argparse.Namespace) -> int:
@@ -400,9 +618,9 @@ def command_update(args: argparse.Namespace) -> int:
         status["_manifest"],
         args.timeout,
     )
-    print(f"已更新 RentPro Skill 到 {status['latest_version']}：{args.local_skill}")
+    print(f"已更新 RentPro Skill 包到 {status['latest_version']}：{args.local_skill.parent}")
     if previous:
-        print(f"旧 Skill 已备份：{previous}")
+        print(f"旧文件已备份：{previous}")
     print("请刷新或重启 WorkBuddy 以加载新 Skill。")
     return 0
 
@@ -414,7 +632,7 @@ def command_install(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="检查并更新 RentPro WorkBuddy Skill。",
+        description="检查、安装并更新 RentPro WorkBuddy Skill 包。",
     )
     parser.add_argument(
         "--manifest-url",
@@ -435,11 +653,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    check = subparsers.add_parser("check", help="检查远端 Skill 版本")
+    check = subparsers.add_parser("check", help="检查远端 Skill 版本和文件")
     check.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     check.set_defaults(func=command_check)
 
-    update = subparsers.add_parser("update", help="用户确认后更新本地 Skill")
+    update = subparsers.add_parser("update", help="用户确认后更新本地 Skill 包")
     update.add_argument("--yes", action="store_true", help="已获得用户确认，跳过二次询问")
     update.add_argument("--force", action="store_true", help="即使当前看起来是最新也重新下载")
     update.add_argument("--json", action="store_true", help="输出机器可读 JSON")
@@ -447,7 +665,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     install = subparsers.add_parser(
         "install",
-        help="从当前项目安装 Skill 和更新器到 WorkBuddy",
+        help="从当前项目安装 Skill、references 和更新器到 WorkBuddy",
     )
     install.add_argument(
         "--update-script",
