@@ -1,19 +1,19 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.10.1",
-  "mcp_min_version": "0.9.0",
+  "latest_version": "0.11.0",
+  "mcp_min_version": "0.10.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "0732c21989f45f94aab57ad43a21a87be30d84450b759e8feb050e18182bfee1",
+  "sha256": "7e60818395821c254ca031b1bf8082d8f573c345ce34eca3fa89de6439cb568e",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "0732c21989f45f94aab57ad43a21a87be30d84450b759e8feb050e18182bfee1"
+      "sha256": "7e60818395821c254ca031b1bf8082d8f573c345ce34eca3fa89de6439cb568e"
     },
     {
       "path": "references/response-format.md",
@@ -34,5 +34,5 @@
       "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
     }
   ],
-  "release_notes": "0.10.1：拆分按需 references，升级 schema v2 多文件发布与 WorkBuddy 安装校验。"
+  "release_notes": "0.11.0：新增菜单 9「检查更新 Skill」；房源经理联系方式固定为 13691354259；内测发布边界去硬编码，改由 MCP 服务端控制。"
 }
