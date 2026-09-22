@@ -5,6 +5,7 @@
 
 ## 首轮房源列表
 
+本节适用于标准需求搜索；具体楼盘直查使用下一节，不展示全量跨楼盘聚合表。
 回复顺序固定为：
 
 1. 有效期提示；
@@ -54,6 +55,34 @@
 - 位置优先使用 `listing.location.district` 和 `listing.location.business_district`；缺失写“待补充”，不从地址或楼盘名推断。
 - 不主动添加顾问式排名、交通百科或长篇推荐理由；只有用户明确要求时才进入比较/顾问模式。
 
+## 具体楼盘直查
+
+一次只展示当前楼盘，不要求模板，不把查询写成已建立或已修改的需求。
+`search_listings` 直接返回 `validity_notice`、`property_groups` 和 `listings`，没有外层 `search`。
+单楼盘命中时，使用返回的 `property_groups[0].property_name`、`listing_count` 和 `property_url`，
+展示该楼盘的全部 `listings`，不再截成 5 套；每套的楼盘必须与当前组一致。
+
+```text
+### {validity_notice}
+
+### {property_name} 当前在租房源
+共找到 {listing_count} 套当前可展示房源
+[楼盘资料]({property_url})
+
+①标题：{listing.title}
+{property_name}｜{户型/居室}｜{面积}｜{月租}｜[查看房源详情与笔记]({note_url})
+```
+
+- 用户本次明确附加了预算或居室等条件时，简短写明本次筛选，不引用未要求沿用的旧需求。
+- 有待看楼盘时末尾提示：“回复‘下一个’查看下一个楼盘，也可以直接发送具体楼盘名称。”
+  队列已全部看完时说明已看完，可直接发送其他楼盘名称，不再提示存在“下一个”。
+- `property_count>1` 说明名称有歧义，只列 MCP 返回的楼盘名称让用户确认；不要展示跨楼盘挂牌，
+  也不要把总数当成用户指定楼盘的套数。确认完整名称后重新查询。
+- `total=0` 时说明“该楼盘在当前发布范围内暂无可直接展示的在租房源”，不是“全市场无房”；
+  不自动换楼盘、不删除用户条件重搜。零结果仍算本轮已查询，用户可以继续“下一个”。
+- `session_token` 仅供宿主续接查询、收藏/排除，不向客户展示，不代表已创建需求。
+- 客户链接、有效期、带圈序号和缺失字段继续遵守本文件的通用规则；无链接时不输出示例占位链接。
+
 ## 客户链接
 
 ### `note_url`
@@ -100,7 +129,7 @@
 
 不得展示：
 
-- `listing_id`、`listing_ref`、`lead_id`、数据库 ID；
+- `listing_id`、`listing_ref`、`lead_id`、`session_token`、数据库 ID；
 - `source`、`confidence`、`evidence`、`basis`；
 - `lifecycle_status`、`governance_status`、同步批次、生产库、镜像库、metadata；
 - 内部推算、审核过程、后台人员和内部备注；

@@ -1,31 +1,31 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.11.0",
+  "latest_version": "0.11.1",
   "mcp_min_version": "0.10.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "7e60818395821c254ca031b1bf8082d8f573c345ce34eca3fa89de6439cb568e",
+  "sha256": "32ef24ed8a8b9ff2f0f57a82c98bc1409bb566f0b64b35ce674bc92b88cd726e",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "7e60818395821c254ca031b1bf8082d8f573c345ce34eca3fa89de6439cb568e"
+      "sha256": "32ef24ed8a8b9ff2f0f57a82c98bc1409bb566f0b64b35ce674bc92b88cd726e"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=main",
-      "sha256": "3523a5b1207d0f7a9ab905d6beb8b5fc6fbb2ae7c9069ea985cdcc0058132d36"
+      "sha256": "73cd3cfcc2e36f5670400dd9340b59bc8fb29e8de7efa29c77cf7341c329577e"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
-      "sha256": "1bb6557ca39999befdfa67b89672d0063680fc5705a59f76379c4a4e16ebbd3c"
+      "sha256": "24aa479fb156ff3c0d480e71b46ce18c4ce0058d9cb2e6a9da8b907b674c0653"
     },
     {
       "path": "rentpro_skill_update.py",
@@ -34,5 +34,5 @@
       "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
     }
   ],
-  "release_notes": "0.11.0：新增菜单 9「检查更新 Skill」；房源经理联系方式固定为 13691354259；内测发布边界去硬编码，改由 MCP 服务端控制。"
+  "release_notes": "release rentpro-rent 0.11.1: direct property lookup, multi-property queue, release catalog, and host routing updates"
 }
