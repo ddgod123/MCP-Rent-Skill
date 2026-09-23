@@ -92,7 +92,7 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.10.1
-最低 MCP: 0.9.0
+Skill: rentpro-rent 0.12.0
+最低 MCP: 0.11.0
 更新通道: beta
 ```

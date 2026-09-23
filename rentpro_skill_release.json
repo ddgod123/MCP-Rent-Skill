@@ -1,31 +1,31 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.11.1",
-  "mcp_min_version": "0.10.0",
+  "latest_version": "0.14.0",
+  "mcp_min_version": "0.13.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "32ef24ed8a8b9ff2f0f57a82c98bc1409bb566f0b64b35ce674bc92b88cd726e",
+  "sha256": "6988f563df778230228a9b3a5715a189e5af5c594ced72b965858363db8b1773",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "32ef24ed8a8b9ff2f0f57a82c98bc1409bb566f0b64b35ce674bc92b88cd726e"
+      "sha256": "6988f563df778230228a9b3a5715a189e5af5c594ced72b965858363db8b1773"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=main",
-      "sha256": "73cd3cfcc2e36f5670400dd9340b59bc8fb29e8de7efa29c77cf7341c329577e"
+      "sha256": "2c4d0053b751e4ceada6b962aca50dc069bc63dcf010e043364dc6e87450dceb"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
-      "sha256": "24aa479fb156ff3c0d480e71b46ce18c4ce0058d9cb2e6a9da8b907b674c0653"
+      "sha256": "584f3246fd3fd6e475e4afb5e29a4fcc42b871cd76d3c18dd714e1257a408997"
     },
     {
       "path": "rentpro_skill_update.py",
@@ -34,5 +34,5 @@
       "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
     }
   ],
-  "release_notes": "release rentpro-rent 0.11.1: direct property lookup, multi-property queue, release catalog, and host routing updates"
+  "release_notes": "Release rentpro-rent 0.14.0 with strict same-house-type property discovery filters."
 }

@@ -8,6 +8,31 @@
 当任务涉及需求上下文读取、需求确认、深度筛选目录、房源详情或房源比较时，读取本文件。
 主搜索、深度筛选整组替换、房源浏览工作区和留资流程仍以 `SKILL.md` 中的常驻规则为准。
 
+## `list_release_properties`
+
+- **调**：用户选择菜单 `2`，或询问“你们业务盘是哪些小区”“你们做哪些小区”“目前有哪些豪宅楼盘有出租房源”“哪些区有你们的房源”等当前业务范围问题。
+- **不调**：用户明确问单个楼盘的具体在租挂牌时，改用 `search_listings(property_name=..., mode=list)`；用户只问代表项目时引用静态代表项目名单。
+- **只读边界**：不需要 `session_token`，不创建或修改需求，不改变直查队列；返回的是 MCP 当前发布白名单，不是全北京楼盘全集。
+- **读结果**：按 `districts[].properties[].business_district` 分组为区→商圈→楼盘表，展示 `listing_count`、`primary_layout` 和 `rent_range`。`listing_count=0` 写“暂无可展示在租房源”；空的文案字段写“待运营补充”。
+- **禁止推断**：不得从 `avg_rent_level`、推断价、房源标题或户型明细自行生成主力户型和租金文案；不得把业务范围楼盘说成当前有房。
+- **失败时**：说明业务楼盘目录暂时无法读取，不退回静态名单冒充实时结果，也不创建需求。
+
+## `get_property_filter_catalog`
+
+- **调**：用户询问“有泳池/健身房/会所的楼盘”“标准层高多少以上的楼盘”“近 N 年内交付的小区”“有地暖的小区”“五居及以上/大面积/450㎡以上/一梯一户/私密一些的楼盘”，或准备按物业公司、绿化率、园林等条件筛楼盘时。
+- **只读边界**：不需要 `session_token`，不创建或修改需求；这是楼盘层级目录，不是挂牌筛选目录。
+- **读结果**：先读取严格支持条件及其 `allowed_operators`、`allowed_values`、单位和缺失口径，再决定是否调用 `search_release_properties`。`status=pending` 必须告知当前不能严格筛选，不能转换为租房深度筛选。
+- **失败时**：说明楼盘筛选目录暂不可用，不自行猜数据库字段或回退为挂牌搜索。
+
+## `search_release_properties`
+
+- **调**：用户明确要找满足一个或多个楼盘条件的项目，且尚未进入具体挂牌选择阶段。
+- **只能传**：只传 `get_property_filter_catalog` 返回的严格条件编码；当前严格条件还包括 `house_type.is_5plus_bedroom=true`、`house_type.is_300plus_sqm=true`、`house_type.bedroom_count`、`house_type.area` 和 `house_type.elevator_per_household="1梯1户"`。布尔条件使用 `eq`；标准层高和户型数值使用 `gt`/`gte`/`lt`/`lte`/`eq`；交付日期比较使用 `YYYY-MM-DD`，用户说“近 N 年内”时使用 `operator=within_years` 和整数年数；面积单位为㎡，居室单位为室。“高于/低于”分别用 `gt`/`lt`，“至少/至多”分别用 `gte`/`lte`。
+- **组合语义**：同一请求中的条件默认 AND；楼盘条件在楼盘上判断，多个户型条件必须在同一真实户型上同时满足。缺失字段、面积区间或标签冲突不命中并按未知处理，不把 NULL 解释为 false。需要同时设置数值上下限时，可分别传 `gte` 和 `lte`，不要重复同一运算符。
+- **读结果**：按 `districts[].properties[]` 的区→商圈→楼盘层级展示 `listing_count`、`primary_layout`、`rent_range`、`matched_facts`、`matched_house_types` 和 `property_url`；`matched_count`、`unknown_count`、`scope_count` 原样用于说明覆盖范围。`matched_house_types` 只表示存在同一户型满足全部户型条件，不把它写成整盘属性或当前有房；不要把 `listing_count` 当作筛选命中条件或房源详情。
+- **不调**：用户已经点名某楼盘要看当前在租房源时，改用 `search_listings(property_name=..., mode=list)`；用户要求按预算/居室/面积找具体挂牌时，走租房需求或挂牌搜索。客户说“私密”时不能把词直接当成“管理严格”，应明确采用一梯一户这一可核验方向。
+- **失败时**：将“不支持/待治理/格式错误”的条件原样转为可理解的提示，不删除条件、不放宽条件、不改用挂牌搜索冒充楼盘筛选。
+
 ## `start_rental_demand`
 
 - **调**：用户开始新的租房咨询、选择菜单 `1`，或明确要求租房需求模板时；新会话才把已确定条件放进
