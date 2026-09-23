@@ -1,19 +1,19 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.17.0",
-  "mcp_min_version": "0.16.0",
+  "latest_version": "0.18.0",
+  "mcp_min_version": "0.17.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "a70ee1ca8666cd6ee21e5fc711239cf2982699b8b373d25e19142a799fe57164",
+  "sha256": "e1ce4554651e818db0cc888e7a278552303aacf29373ac51dad385759b9a2150",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "a70ee1ca8666cd6ee21e5fc711239cf2982699b8b373d25e19142a799fe57164"
+      "sha256": "e1ce4554651e818db0cc888e7a278552303aacf29373ac51dad385759b9a2150"
     },
     {
       "path": "references/response-format.md",
@@ -25,7 +25,7 @@
       "path": "references/tool-routing.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
-      "sha256": "a0051481aa65e3ff8f68f0f62dd55371dd5ef669ee3345af126d8453c482d31e"
+      "sha256": "63bb731e55f346ebf5923978cbc10e24ddbd9bfaa3c220bee48b414a88085281"
     },
     {
       "path": "rentpro_skill_update.py",
@@ -34,5 +34,5 @@
       "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
     }
   ],
-  "release_notes": "Release rentpro-rent 0.17.0 with unified verified entity distances and explicit unknown location handling; requires MCP 0.16.0."
+  "release_notes": "Release rentpro-rent 0.18.0 with verified ring topology and conservative boundary guidance; requires MCP 0.17.0."
 }
