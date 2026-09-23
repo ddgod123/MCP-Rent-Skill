@@ -1,31 +1,31 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.14.0",
-  "mcp_min_version": "0.13.0",
+  "latest_version": "0.17.0",
+  "mcp_min_version": "0.16.0",
   "update_channel": "beta",
   "skill_path": "SKILL.md",
   "source_ref": "main",
   "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "6988f563df778230228a9b3a5715a189e5af5c594ced72b965858363db8b1773",
+  "sha256": "a70ee1ca8666cd6ee21e5fc711239cf2982699b8b373d25e19142a799fe57164",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "6988f563df778230228a9b3a5715a189e5af5c594ced72b965858363db8b1773"
+      "sha256": "a70ee1ca8666cd6ee21e5fc711239cf2982699b8b373d25e19142a799fe57164"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=main",
-      "sha256": "2c4d0053b751e4ceada6b962aca50dc069bc63dcf010e043364dc6e87450dceb"
+      "sha256": "333d3bc5b23086969295a53ac3592387d00d61bf7541360db0b5436d6492dc83"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
-      "sha256": "584f3246fd3fd6e475e4afb5e29a4fcc42b871cd76d3c18dd714e1257a408997"
+      "sha256": "a0051481aa65e3ff8f68f0f62dd55371dd5ef669ee3345af126d8453c482d31e"
     },
     {
       "path": "rentpro_skill_update.py",
@@ -34,5 +34,5 @@
       "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
     }
   ],
-  "release_notes": "Release rentpro-rent 0.14.0 with strict same-house-type property discovery filters."
+  "release_notes": "Release rentpro-rent 0.17.0 with unified verified entity distances and explicit unknown location handling; requires MCP 0.16.0."
 }
