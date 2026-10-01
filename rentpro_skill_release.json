@@ -3,36 +3,36 @@
   "skill_name": "rentpro-rent",
   "latest_version": "0.18.0",
   "mcp_min_version": "0.17.0",
-  "update_channel": "beta",
+  "update_channel": "stable",
   "skill_path": "SKILL.md",
-  "source_ref": "main",
-  "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-  "sha256": "e1ce4554651e818db0cc888e7a278552303aacf29373ac51dad385759b9a2150",
+  "source_ref": "rentpro-rent-v0.18.0",
+  "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.0",
+  "sha256": "3d2c4be0dfb4450e8e8a48376433bae3a6273239975ab97af671119e56450bef",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=main",
-      "sha256": "e1ce4554651e818db0cc888e7a278552303aacf29373ac51dad385759b9a2150"
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.0",
+      "sha256": "3d2c4be0dfb4450e8e8a48376433bae3a6273239975ab97af671119e56450bef"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=main",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=rentpro-rent-v0.18.0",
       "sha256": "333d3bc5b23086969295a53ac3592387d00d61bf7541360db0b5436d6492dc83"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=main",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=rentpro-rent-v0.18.0",
       "sha256": "63bb731e55f346ebf5923978cbc10e24ddbd9bfaa3c220bee48b414a88085281"
     },
     {
       "path": "rentpro_skill_update.py",
       "role": "updater",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=main",
-      "sha256": "0afc8fca8961c5f3714e3bbaddb989d922b64ce9686dc5920bd9efb70141677e"
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.0",
+      "sha256": "10035e3414656e9dc80cc3a49ae9db9844b909a84718a3c240c5025311ebc917"
     }
   ],
-  "release_notes": "Release rentpro-rent 0.18.0 with verified ring topology and conservative boundary guidance; requires MCP 0.17.0."
+  "release_notes": "稳定发布 RentPro 租房顾问 Skill 0.18.0；来源固定到不可变 tag，要求 MCP 0.17.0。"
 }

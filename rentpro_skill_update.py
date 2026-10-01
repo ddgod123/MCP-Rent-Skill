@@ -43,6 +43,7 @@ DEFAULT_UPDATE_SCRIPT = (
 GITHUB_HOSTS = {"api.github.com", "raw.githubusercontent.com"}
 VERSION_RE = re.compile(r"^[vV]?([0-9]+)\.([0-9]+)\.([0-9]+)$")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+IMMUTABLE_REF_RE = re.compile(r"^(?:[0-9a-f]{40}|rentpro-rent-v[0-9]+\.[0-9]+\.[0-9]+)$")
 UPDATE_AVAILABLE_EXIT = 2
 
 
@@ -235,6 +236,11 @@ def manifest_files(manifest: dict) -> list[ManifestFile]:
     source_ref = manifest.get("source_ref", "main")
     if not isinstance(source_ref, str) or not source_ref:
         raise UpdateError("manifest 的 source_ref 无效")
+    if manifest.get("update_channel", "stable") == "stable" and not IMMUTABLE_REF_RE.fullmatch(source_ref):
+        raise UpdateError(
+            "stable Skill manifest 必须固定到 40 位 commit SHA 或 rentpro-rent-vX.Y.Z tag；"
+            "拒绝从可变分支下载"
+        )
 
     schema_version = manifest.get("schema_version", 1)
     if schema_version == 1:

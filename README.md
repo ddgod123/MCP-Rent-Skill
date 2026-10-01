@@ -92,7 +92,10 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.12.0
-最低 MCP: 0.11.0
-更新通道: beta
+Skill: rentpro-rent 0.18.0
+最低 MCP: 0.17.0
+更新通道: stable
 ```
+
+正式发布要求：先在本仓库创建 `rentpro-rent-vX.Y.Z` 不可变 tag，发布脚本的
+`--source-ref` 必须传该 tag 或 40 位 commit SHA。稳定通道不会从 `main` 等可变分支下载。
