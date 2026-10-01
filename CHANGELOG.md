@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1
+
+- 将公网 MCP + Skill 安装器纳入公开发布包，安装命令固定到不可变版本 tag。
+- WorkBuddy 安装器继续校验 HTTPS、健康状态、Token 长度和 Skill 文件 SHA-256。
+
 ## 0.18.0
 
 - 正式稳定发布：manifest 固定到不可变 tag/commit，更新器拒绝从可变分支安装稳定包。

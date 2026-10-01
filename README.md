@@ -13,7 +13,7 @@ MCP 工具选择和客户侧回复边界。
 运行后会安全地交互式读取 Token、检查 HTTPS 健康状态，再写入宿主配置。
 
 ```bash
-set -eu; d="$HOME/.rentpro/mcp-client"; if [ -d "$d/.git" ]; then git -C "$d" fetch --depth 1 origin tag rentpro-rent-v0.18.0 && git -C "$d" checkout --detach FETCH_HEAD; else git clone --depth 1 --branch rentpro-rent-v0.18.0 https://github.com/ddgod123/MCP-Rent-Skill.git "$d"; fi; python3 "$d/install_rentpro.py" --host workbuddy
+set -eu; d="$HOME/.rentpro/mcp-client"; if [ -d "$d/.git" ]; then git -C "$d" fetch --depth 1 origin tag rentpro-rent-v0.18.1 && git -C "$d" checkout --detach FETCH_HEAD; else git clone --depth 1 --branch rentpro-rent-v0.18.1 https://github.com/ddgod123/MCP-Rent-Skill.git "$d"; fi; python3 "$d/install_rentpro.py" --host workbuddy
 ```
 
 其他支持 MCP/Skill 的宿主可以使用同一命令，将最后的 `--host workbuddy` 改为
@@ -94,7 +94,7 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.18.0
+Skill: rentpro-rent 0.18.1
 最低 MCP: 0.17.0
 更新通道: stable
 ```
