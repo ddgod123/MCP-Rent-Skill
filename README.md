@@ -7,20 +7,22 @@ MCP 工具选择和客户侧回复边界。
 真实挂牌数据由 RentPro MCP 服务提供。本仓库不包含数据库、后端服务、生产数据、图片
 密钥或内部治理文档。
 
-## 安装到 WorkBuddy
+## 一键安装 MCP + Skill
 
-先在 WorkBuddy 中配置 RentPro MCP 服务，例如：
-
-```text
-http://127.0.0.1:8091/mcp
-```
-
-然后执行：
+安装器连接 RentPro 公网 MCP，并将 Skill 安装到 WorkBuddy。命令不会包含 Token；
+运行后会安全地交互式读取 Token、检查 HTTPS 健康状态，再写入宿主配置。
 
 ```bash
-git clone https://github.com/ddgod123/MCP-Rent-Skill.git
-cd MCP-Rent-Skill
-python3 rentpro_skill_update.py install
+set -eu; d="$HOME/.rentpro/mcp-client"; if [ -d "$d/.git" ]; then git -C "$d" fetch --depth 1 origin tag rentpro-rent-v0.18.0 && git -C "$d" checkout --detach FETCH_HEAD; else git clone --depth 1 --branch rentpro-rent-v0.18.0 https://github.com/ddgod123/MCP-Rent-Skill.git "$d"; fi; python3 "$d/install_rentpro.py" --host workbuddy
+```
+
+其他支持 MCP/Skill 的宿主可以使用同一命令，将最后的 `--host workbuddy` 改为
+`--host generic`；安装器会输出不含真实 Token 的配置模板。
+
+MCP endpoint：
+
+```text
+https://mcp.smartrent.xin/mcp
 ```
 
 安装位置：

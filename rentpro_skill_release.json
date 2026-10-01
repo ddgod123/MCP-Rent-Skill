@@ -32,7 +32,13 @@
       "role": "updater",
       "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.0",
       "sha256": "10035e3414656e9dc80cc3a49ae9db9844b909a84718a3c240c5025311ebc917"
+    },
+    {
+      "path": "install_rentpro.py",
+      "role": "installer",
+      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.py?ref=rentpro-rent-v0.18.0",
+      "sha256": "a1fbe48d000b8f4ed0eee0276e86903e6dd95bc3230df959f7ef15154a162bf6"
     }
   ],
-  "release_notes": "稳定发布 RentPro 租房顾问 Skill 0.18.0；来源固定到不可变 tag，要求 MCP 0.17.0。"
+  "release_notes": "稳定发布 RentPro 租房顾问 Skill 0.18.0，并提供公网 MCP + Skill 安装器。"
 }
