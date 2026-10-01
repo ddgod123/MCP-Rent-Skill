@@ -15,22 +15,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate manifest hashes and metadata
-        run: |
-          python3 - <<'PY'
-          import hashlib, json, pathlib, re
-          root = pathlib.Path('.')
-          manifest = json.loads((root / 'rentpro_skill_release.json').read_text())
-          assert manifest['schema_version'] == 2
-          assert manifest['skill_name'] == 'rentpro-rent'
-          if manifest['update_channel'] == 'stable':
-              assert re.fullmatch(r'rentpro-rent-v\d+\.\d+\.\d+|[0-9a-f]{40}', manifest['source_ref'])
-          skill = (root / 'SKILL.md').read_bytes()
-          assert hashlib.sha256(skill).hexdigest() == manifest['sha256']
-          for item in manifest['files']:
-              content = (root / item['path']).read_bytes()
-              assert hashlib.sha256(content).hexdigest() == item['sha256'], item['path']
-          print('manifest OK')
-          PY
-      - name: Compile updater
-        run: python3 -m py_compile rentpro_skill_update.py
+      - name: Validate release metadata, hashes, and installer smoke test
+        run: python3 scripts/validate_release.py

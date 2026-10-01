@@ -1,0 +1,31 @@
+name: Publish RentPro Skill release
+
+on:
+  push:
+    tags:
+      - "rentpro-rent-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate immutable tag and release package
+        run: python3 scripts/validate_release.py --tag "${GITHUB_REF_NAME}"
+      - name: Create GitHub release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release already exists: ${GITHUB_REF_NAME}"
+          else
+            gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "${GITHUB_REF_NAME}"
+          fi
