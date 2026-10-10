@@ -11,20 +11,15 @@ MCP 工具选择和客户侧回复边界。
 
 ## 安装 Skill 与 MCP
 
-普通用户只安装 Skill，不需要注册，也不会被要求输入 MCP Token。MCP 连接由管理员预配置到受信任宿主中。
+普通用户不需要注册、终端、脚本或 MCP Token。请把下面这个宿主安装地址直接发送给
+WorkBuddy 等支持 Skill 导入的 AI 宿主：
 
-```bash
-set -eu; tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT; python3 - "$tmp" <<'PY'
-import pathlib, sys
-from urllib.request import urlopen
-p = pathlib.Path(sys.argv[1]) / 'install_rentpro.sh'
-p.write_bytes(urlopen('https://smartrent.xin/skill/rentpro-rent/v0.18.4/install_rentpro.sh', timeout=20).read())
-p.chmod(0o700)
-PY
-sh "$tmp/install_rentpro.sh" --host workbuddy --skip-mcp
+```text
+https://api.smartrent.xin/api/public/rentpro-install
 ```
 
-该命令只安装 `Mike的房源库 Skill（北京租房）`，不会修改 WorkBuddy 的 MCP 配置。
+宿主会从该地址读取结构化安装描述。未知宿主不应
+盲目修改本地配置文件；请让宿主管理员按其官方接入方式配置 MCP。
 
 管理员在受信任终端配置 MCP 时，使用受保护的 Token 文件：
 
@@ -37,8 +32,9 @@ python3 "$HOME/.rentpro/mcp-client/install_rentpro.py" \
 
 不要把 MCP Token 发给普通用户，也不要写入命令行、Git、截图或聊天。
 
-其他支持 MCP/Skill 的宿主可以使用同一命令，将最后的 `--host workbuddy` 改为
-`--host generic`；安装器会输出不含真实 Token 的配置模板。
+其他支持 MCP/Skill 的宿主可以直接发送上面的宿主安装地址。若宿主不支持 URL 导入，请让管理员按
+该宿主的官方方式配置 MCP，不要让普通用户
+接触 Bearer Token。
 
 MCP endpoint：
 
