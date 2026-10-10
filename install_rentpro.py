@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Install RentPro MCP + Skill for supported AI hosts.
+"""Install the RentPro Skill and optionally configure MCP for trusted hosts.
 
-The installer configures a remote MCP endpoint. It never downloads a server
-binary, writes credentials to the repository, or prints the bearer token.
+Skill-only installation never needs a Bearer Token. MCP configuration is an
+explicit administrator action and reads the token from a protected file or
+environment variable; it never prints the token or writes it to this repo.
 """
 
 from __future__ import annotations
@@ -23,10 +24,11 @@ from urllib.request import Request, urlopen
 
 DEFAULT_ENDPOINT = "https://mcp.smartrent.xin/mcp"
 DEFAULT_MANIFEST = (
-    "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/"
-    "rentpro_skill_release.json?ref=main"
+    "https://smartrent.xin/skill/rentpro-rent/v0.18.4/"
+    "rentpro_skill_release.json"
 )
 SERVER_NAME = "rentpro"
+DISPLAY_NAME = "Mike的房源库 Skill（北京租房）"
 
 
 def backup(path: Path) -> Path | None:
@@ -75,12 +77,49 @@ def skill_update(manifest_url: str) -> None:
         [
             sys.executable,
             str(script),
-            "install",
             "--manifest-url",
             manifest_url,
+            "update",
+            "--yes",
+            "--force",
         ],
         check=True,
     )
+
+
+def read_token_file(path: Path) -> str:
+    try:
+        value = path.expanduser().read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise RuntimeError(f"无法读取 MCP Token 文件：{path}") from exc
+    if not value:
+        raise RuntimeError(f"MCP Token 文件为空：{path}")
+    return value
+
+
+def resolve_token(args: argparse.Namespace) -> str:
+    sources = sum(
+        value is not None
+        for value in (args.token, args.token_file, args.token_env)
+    )
+    if sources > 1:
+        raise RuntimeError("--token、--token-file、--token-env 只能选择一个")
+
+    if args.token_file:
+        return read_token_file(Path(args.token_file))
+    if args.token_env:
+        value = os.environ.get(args.token_env, "").strip()
+        if not value:
+            raise RuntimeError(f"环境变量 {args.token_env} 未设置或为空")
+        return value
+    if args.token:
+        return args.token.strip()
+    if args.no_prompt:
+        raise RuntimeError(
+            "非交互式 MCP 配置必须传 --token-file 或 --token-env；"
+            "普通用户请使用 --skip-mcp"
+        )
+    return getpass.getpass("MCP Bearer Token（不会显示）：").strip()
 
 
 def healthcheck(endpoint: str) -> None:
@@ -103,6 +142,7 @@ def install_workbuddy(endpoint: str, token: str, install_skill: bool) -> None:
         "url": endpoint,
         "headers": {"Authorization": f"Bearer {token}"},
         "disabled": False,
+        "displayName": DISPLAY_NAME,
     }
     old = backup(path)
     write_private_json(path, config)
@@ -111,7 +151,7 @@ def install_workbuddy(endpoint: str, token: str, install_skill: bool) -> None:
     print(f"已写入 WorkBuddy MCP 配置：{path}")
     if install_skill:
         skill_update(DEFAULT_MANIFEST)
-        print("已安装/更新 RentPro Skill")
+        print(f"已安装/更新 Skill：{DISPLAY_NAME}")
 
 
 def print_generic_config(endpoint: str) -> None:
@@ -122,6 +162,7 @@ def print_generic_config(endpoint: str) -> None:
                     SERVER_NAME: {
                         "url": endpoint,
                         "headers": {"Authorization": "Bearer <MCP_AUTH_TOKEN>"},
+                        "displayName": DISPLAY_NAME,
                     }
                 }
             },
@@ -134,7 +175,7 @@ def print_generic_config(endpoint: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="一键安装 RentPro 公网 MCP + Skill（不安装本地数据库或服务端）。"
+        description="安装 RentPro Skill；MCP 配置仅在显式 --configure-mcp 时执行。"
     )
     parser.add_argument(
         "--host",
@@ -145,7 +186,30 @@ def main() -> int:
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument(
         "--token",
-        help="MCP Bearer Token；不传时安全地交互式输入，不会写入仓库",
+        help="MCP Bearer Token（不推荐，会出现在 shell 历史中）",
+    )
+    parser.add_argument(
+        "--token-file",
+        help="从受保护文件读取 MCP Token；不会打印或写入仓库",
+    )
+    parser.add_argument(
+        "--token-env",
+        help="从指定环境变量读取 MCP Token；不会打印",
+    )
+    parser.add_argument(
+        "--no-prompt",
+        action="store_true",
+        help="没有 Token 时直接失败，不打开交互式输入",
+    )
+    parser.add_argument(
+        "--configure-mcp",
+        action="store_true",
+        help="管理员显式开启 MCP 配置；需要 --token-file、--token-env 或交互式 Token",
+    )
+    parser.add_argument(
+        "--skip-mcp",
+        action="store_true",
+        help="兼容参数：只安装 Skill，不修改 WorkBuddy MCP 配置，也不需要 Token",
     )
     parser.add_argument(
         "--skip-skill",
@@ -159,21 +223,32 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not args.endpoint.startswith("https://"):
-        raise RuntimeError("生产 MCP endpoint 必须使用 HTTPS")
-    token = args.token or getpass.getpass("MCP Bearer Token（不会显示）：").strip()
-    if len(token) < 32:
-        raise RuntimeError("MCP Token 长度不足，拒绝写入宿主配置")
+    if args.configure_mcp and args.skip_mcp:
+        raise RuntimeError("--configure-mcp 与 --skip-mcp 不能同时使用")
 
-    if not args.skip_healthcheck:
-        healthcheck(args.endpoint)
-    if args.host == "workbuddy":
-        install_workbuddy(args.endpoint, token, not args.skip_skill)
+    if not args.configure_mcp:
+        if args.skip_skill:
+            raise RuntimeError("只配置 MCP 时必须显式传 --configure-mcp")
+        if args.token or args.token_file or args.token_env:
+            raise RuntimeError("如需配置 MCP，请显式传 --configure-mcp")
+        skill_update(DEFAULT_MANIFEST)
+        print(f"已安装 Skill：{DISPLAY_NAME}（未配置 MCP）")
     else:
-        print_generic_config(args.endpoint)
-        if not args.skip_skill:
-            skill_update(DEFAULT_MANIFEST)
-            print("已安装/更新 RentPro Skill")
+        if not args.endpoint.startswith("https://"):
+            raise RuntimeError("生产 MCP endpoint 必须使用 HTTPS")
+        token = resolve_token(args)
+        if len(token) < 32:
+            raise RuntimeError("MCP Token 长度不足，拒绝写入宿主配置")
+
+        if not args.skip_healthcheck:
+            healthcheck(args.endpoint)
+        if args.host == "workbuddy":
+            install_workbuddy(args.endpoint, token, not args.skip_skill)
+        else:
+            print_generic_config(args.endpoint)
+            if not args.skip_skill:
+                skill_update(DEFAULT_MANIFEST)
+                print(f"已安装/更新 Skill：{DISPLAY_NAME}")
     print("安装完成。请重启或刷新宿主的 MCP/Skill 配置。")
     return 0
 

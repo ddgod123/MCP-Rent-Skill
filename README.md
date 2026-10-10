@@ -1,4 +1,6 @@
-# RentPro 租房顾问 Skill
+# Mike的房源库 Skill（北京租房）
+
+技术标识：`rentpro-rent`。这是 RentPro 的宿主侧租房顾问行为层，面向北京高端住宅租赁。
 
 `rentpro-rent` 是 RentPro 的宿主侧行为层，面向 WorkBuddy、Codex、Claude 等支持
 Skill/系统指令的 MCP 宿主。它负责租房意图识别、首轮菜单、需求收集、需求上下文维护、
@@ -7,14 +9,33 @@ MCP 工具选择和客户侧回复边界。
 真实挂牌数据由 RentPro MCP 服务提供。本仓库不包含数据库、后端服务、生产数据、图片
 密钥或内部治理文档。
 
-## 一键安装 MCP + Skill
+## 安装 Skill 与 MCP
 
-安装器连接 RentPro 公网 MCP，并将 Skill 安装到 WorkBuddy。命令不会包含 Token；
-运行后会安全地交互式读取 Token、检查 HTTPS 健康状态，再写入宿主配置。
+普通用户只安装 Skill，不需要注册，也不会被要求输入 MCP Token。MCP 连接由管理员预配置到受信任宿主中。
 
 ```bash
-set -eu; d="$HOME/.rentpro/mcp-client"; r="https://github.com/ddgod123/MCP-Rent-Skill.git"; t="rentpro-rent-v0.18.2"; if [ -d "$d/.git" ]; then git -C "$d" remote set-url origin "$r"; git -C "$d" fetch --depth 1 origin "refs/tags/$t" && git -C "$d" checkout --detach FETCH_HEAD; else git clone --depth 1 --branch "$t" "$r" "$d"; fi; python3 "$d/install_rentpro.py" --host workbuddy
+set -eu; tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT; python3 - "$tmp" <<'PY'
+import pathlib, sys
+from urllib.request import urlopen
+p = pathlib.Path(sys.argv[1]) / 'install_rentpro.sh'
+p.write_bytes(urlopen('https://smartrent.xin/skill/rentpro-rent/v0.18.4/install_rentpro.sh', timeout=20).read())
+p.chmod(0o700)
+PY
+sh "$tmp/install_rentpro.sh" --host workbuddy --skip-mcp
 ```
+
+该命令只安装 `Mike的房源库 Skill（北京租房）`，不会修改 WorkBuddy 的 MCP 配置。
+
+管理员在受信任终端配置 MCP 时，使用受保护的 Token 文件：
+
+```bash
+python3 "$HOME/.rentpro/mcp-client/install_rentpro.py" \
+  --host workbuddy \
+  --configure-mcp \
+  --token-file "$HOME/.config/rentpro/mcp-token"
+```
+
+不要把 MCP Token 发给普通用户，也不要写入命令行、Git、截图或聊天。
 
 其他支持 MCP/Skill 的宿主可以使用同一命令，将最后的 `--host workbuddy` 改为
 `--host generic`；安装器会输出不含真实 Token 的配置模板。
@@ -94,7 +115,8 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.18.2
+Skill: rentpro-rent 0.18.4
+展示名称：Mike的房源库 Skill（北京租房）
 最低 MCP: 0.17.0
 更新通道: stable
 ```

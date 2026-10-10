@@ -1,44 +1,61 @@
 {
   "schema_version": 2,
   "skill_name": "rentpro-rent",
-  "latest_version": "0.18.2",
+  "display_name": "Mike的房源库 Skill（北京租房）",
+  "latest_version": "0.18.4",
   "mcp_min_version": "0.17.0",
   "update_channel": "stable",
   "skill_path": "SKILL.md",
-  "source_ref": "rentpro-rent-v0.18.2",
-  "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.2",
-  "sha256": "6c85831187c3b0b46632937e6161cbf6374a0c2af24204ccdb51dfad605ac103",
+  "source_ref": "rentpro-rent-v0.18.4",
+  "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/SKILL.md",
+  "primary_manifest_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/rentpro_skill_release.json",
+  "fallback_manifest_urls": [
+    "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_release.json?ref=rentpro-rent-v0.18.4"
+  ],
+  "sha256": "6711a7c7340fe359bb3d20546c8d29268f73df63bd353f647ed3f735a5d55f15",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.2",
-      "sha256": "6c85831187c3b0b46632937e6161cbf6374a0c2af24204ccdb51dfad605ac103"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/SKILL.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.4",
+      "sha256": "6711a7c7340fe359bb3d20546c8d29268f73df63bd353f647ed3f735a5d55f15"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=rentpro-rent-v0.18.2",
-      "sha256": "333d3bc5b23086969295a53ac3592387d00d61bf7541360db0b5436d6492dc83"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/references/response-format.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=rentpro-rent-v0.18.4",
+      "sha256": "a20ceb7d0241869835dbf5c0ff28ee567ad5ce3b9640482384be808bfb98d1e3"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=rentpro-rent-v0.18.2",
-      "sha256": "63bb731e55f346ebf5923978cbc10e24ddbd9bfaa3c220bee48b414a88085281"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/references/tool-routing.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=rentpro-rent-v0.18.4",
+      "sha256": "92f499fbc2fbd3710fba51eb122f5efd64026c1fbe67eb962ebeb6d20102e1be"
     },
     {
       "path": "rentpro_skill_update.py",
       "role": "updater",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.2",
-      "sha256": "10035e3414656e9dc80cc3a49ae9db9844b909a84718a3c240c5025311ebc917"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/rentpro_skill_update.py",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.4",
+      "sha256": "5c04e68fb98a498a8cf7ab51630dc485d6502b08ae076b4c2fe06c55968c9487"
     },
     {
       "path": "install_rentpro.py",
       "role": "installer",
-      "download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.py?ref=rentpro-rent-v0.18.2",
-      "sha256": "a1fbe48d000b8f4ed0eee0276e86903e6dd95bc3230df959f7ef15154a162bf6"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/install_rentpro.py",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.py?ref=rentpro-rent-v0.18.4",
+      "sha256": "a2409f35a3d826944e32ecb2c561dcc8662605901577368a4a26b62133c93d2d"
+    },
+    {
+      "path": "install_rentpro.sh",
+      "role": "bootstrap",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.4/install_rentpro.sh",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.sh?ref=rentpro-rent-v0.18.4",
+      "sha256": "481438228754ad20011028077c38a2a32704137110fe99b4f42f93ea46f068bb"
     }
   ],
-  "release_notes": "稳定发布 RentPro 租房顾问 Skill 0.18.2，统一官网安装版本并增强旧目录升级安全性。"
+  "release_notes": "同步 RentPro 租房顾问 Skill 多文件包。"
 }

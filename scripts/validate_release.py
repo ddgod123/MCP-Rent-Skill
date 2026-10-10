@@ -59,8 +59,15 @@ def main() -> int:
         assert local.is_file(), f"manifest file missing: {path}"
         assert sha256(local) == item.get("sha256"), f"SHA-256 mismatch: {path}"
         parsed = urlparse(item.get("download_url", ""))
-        assert parsed.scheme == "https" and parsed.netloc == "api.github.com", f"unsafe download URL: {path}"
-        assert parse_qs(parsed.query).get("ref") == [source_ref], f"download URL ref mismatch: {path}"
+        assert parsed.scheme == "https", f"unsafe download URL: {path}"
+        if parsed.netloc in {"smartrent.xin", "www.smartrent.xin"}:
+            assert parsed.path.startswith(f"/skill/rentpro-rent/v{version}/"), f"cloud URL version mismatch: {path}"
+        else:
+            assert parsed.netloc == "api.github.com", f"unsafe download URL: {path}"
+            assert parse_qs(parsed.query).get("ref") == [source_ref], f"download URL ref mismatch: {path}"
+        fallback = item.get("fallback_download_url")
+        assert isinstance(fallback, str) and urlparse(fallback).netloc == "api.github.com", f"missing GitHub fallback URL: {path}"
+        assert parse_qs(urlparse(fallback).query).get("ref") == [source_ref], f"fallback ref mismatch: {path}"
 
     subprocess.run([sys.executable, "-m", "py_compile", "install_rentpro.py", "rentpro_skill_update.py", "scripts/validate_release.py"], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "install_rentpro.py", "--help"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)

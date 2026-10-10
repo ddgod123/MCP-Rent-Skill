@@ -29,8 +29,12 @@ SKILL_NAME = "rentpro-rent"
 REMOTE_SKILL_RELATIVE_PATH = "SKILL.md"
 PROJECT_SKILL_RELATIVE_PATH = "skills/rentpro-rent/SKILL.md"
 DEFAULT_MANIFEST_URL = (
+    "https://smartrent.xin/skill/rentpro-rent/v0.18.4/"
+    "rentpro_skill_release.json"
+)
+DEFAULT_GITHUB_MANIFEST_URL = (
     f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
-    "rentpro_skill_release.json?ref=main"
+    "rentpro_skill_release.json?ref=rentpro-rent-v0.18.4"
 )
 DEFAULT_LOCAL_SKILL = Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
 PROJECT_SKILL_CANDIDATES = (
@@ -41,6 +45,7 @@ DEFAULT_UPDATE_SCRIPT = (
     Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "rentpro_skill_update.py"
 )
 GITHUB_HOSTS = {"api.github.com", "raw.githubusercontent.com"}
+CLOUD_HOSTS = {"smartrent.xin", "www.smartrent.xin"}
 VERSION_RE = re.compile(r"^[vV]?([0-9]+)\.([0-9]+)\.([0-9]+)$")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 IMMUTABLE_REF_RE = re.compile(r"^(?:[0-9a-f]{40}|rentpro-rent-v[0-9]+\.[0-9]+\.[0-9]+)$")
@@ -63,6 +68,7 @@ class ManifestFile:
     role: str
     download_url: str
     sha256: str
+    fallback_download_url: str | None = None
 
 
 def parse_version(value: str) -> tuple[int, int, int]:
@@ -131,13 +137,18 @@ def _github_token() -> str | None:
     return None
 
 
-def validate_github_url(value: str) -> None:
+def validate_download_url(value: str) -> None:
     parsed = urlparse(value)
-    if parsed.scheme != "https" or parsed.hostname not in GITHUB_HOSTS:
+    if parsed.scheme != "https" or parsed.hostname not in (GITHUB_HOSTS | CLOUD_HOSTS):
         raise UpdateError(
-            "更新地址必须是 HTTPS GitHub API/raw 地址，"
+            "更新地址必须是受信任的 HTTPS 云端或固定 GitHub 地址，"
             f"当前为：{value}"
         )
+    if parsed.hostname in CLOUD_HOSTS:
+        expected = "/skill/rentpro-rent/"
+        if not parsed.path.startswith(expected):
+            raise UpdateError(f"云端 Skill 地址路径无效：{value}")
+        return
     if parsed.hostname == "api.github.com":
         expected = f"/repos/{REPO_OWNER}/{REPO_NAME}/"
         if not parsed.path.startswith(expected):
@@ -148,8 +159,13 @@ def validate_github_url(value: str) -> None:
             raise UpdateError(f"GitHub raw 地址不属于固定 RentPro 仓库：{value}")
 
 
+def validate_github_url(value: str) -> None:
+    """Backward-compatible name retained for callers and older tests."""
+    validate_download_url(value)
+
+
 def fetch_url(url: str, token: str | None, timeout: float) -> bytes:
-    validate_github_url(url)
+    validate_download_url(url)
     request = Request(
         url,
         headers={
@@ -164,15 +180,12 @@ def fetch_url(url: str, token: str | None, timeout: float) -> bytes:
             return response.read()
     except HTTPError as exc:
         if exc.code in {401, 403, 404}:
-            raise UpdateError(
-                "无法读取 GitHub manifest 或 Skill 文件。仓库可能是私有仓库，"
-                "请先配置 GITHUB_TOKEN 或执行 `gh auth login`。"
-            ) from exc
-        raise UpdateError(f"GitHub 请求失败：HTTP {exc.code}") from exc
+            raise UpdateError(f"下载源请求失败：HTTP {exc.code}（{urlparse(url).hostname}）") from exc
+        raise UpdateError(f"下载源请求失败：HTTP {exc.code}") from exc
     except URLError as exc:
-        raise UpdateError(f"GitHub 请求失败：{exc.reason}") from exc
+        raise UpdateError(f"下载源请求失败：{exc.reason}") from exc
     except TimeoutError as exc:
-        raise UpdateError("GitHub 请求超时") from exc
+        raise UpdateError("下载源请求超时") from exc
 
 
 def decode_github_content(content: bytes) -> bytes:
@@ -212,6 +225,11 @@ def github_file_url(path: str, source_ref: str) -> str:
     )
 
 
+def cloud_file_url(path: str, version: str) -> str:
+    encoded_path = quote(path, safe="/")
+    return f"https://smartrent.xin/skill/rentpro-rent/v{quote(version, safe='.')}/{encoded_path}"
+
+
 def _manifest_file(
     raw: dict,
     *,
@@ -225,11 +243,16 @@ def _manifest_file(
     url = raw.get("download_url") or github_file_url(path, source_ref)
     if not isinstance(url, str) or not url:
         raise UpdateError(f"manifest 文件 {path!r} 缺少 download_url")
-    validate_github_url(url)
+    validate_download_url(url)
     role = raw.get("role", default_role)
     if not isinstance(role, str) or not role:
         role = default_role
-    return ManifestFile(path, role, url, digest.lower())
+    fallback_url = raw.get("fallback_download_url")
+    if fallback_url is not None:
+        if not isinstance(fallback_url, str) or not fallback_url:
+            raise UpdateError(f"manifest 文件 {path!r} 的备用地址无效")
+        validate_download_url(fallback_url)
+    return ManifestFile(path, role, url, digest.lower(), fallback_url)
 
 
 def manifest_files(manifest: dict) -> list[ManifestFile]:
@@ -295,11 +318,26 @@ def manifest_files(manifest: dict) -> list[ManifestFile]:
 
 def load_manifest(url: str, timeout: float) -> dict:
     token = _github_token()
-    raw = decode_github_content(fetch_url(url, token, timeout))
+    candidates = [url]
+    if url == DEFAULT_MANIFEST_URL or urlparse(url).hostname in CLOUD_HOSTS:
+        candidates.append(DEFAULT_GITHUB_MANIFEST_URL)
+    elif url == DEFAULT_GITHUB_MANIFEST_URL:
+        candidates.append(DEFAULT_MANIFEST_URL)
+    raw = None
+    errors = []
+    for candidate in dict.fromkeys(candidates):
+        try:
+            raw = decode_github_content(fetch_url(candidate, token, timeout))
+            url = candidate
+            break
+        except UpdateError as exc:
+            errors.append(str(exc))
+    if raw is None:
+        raise UpdateError("主下载源和备用下载源均不可用：" + "；".join(errors))
     try:
         manifest = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise UpdateError("GitHub manifest 不是有效 JSON") from exc
+        raise UpdateError("Skill manifest 不是有效 JSON") from exc
     if not isinstance(manifest, dict):
         raise UpdateError("GitHub manifest 顶层必须是对象")
     if manifest.get("skill_name") != SKILL_NAME:
@@ -313,6 +351,7 @@ def load_manifest(url: str, timeout: float) -> dict:
     parse_version(latest_version)
     files = manifest_files(manifest)
     manifest["_files"] = files
+    manifest["_manifest_source_url"] = url
     manifest["latest_version"] = latest_version.lstrip("vV")
     return manifest
 
@@ -374,6 +413,7 @@ def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
     skill_item = next(item for item in manifest["_files"] if item.path == "SKILL.md")
     return {
         "skill_name": SKILL_NAME,
+        "display_name": manifest.get("display_name") or "RentPro 租房顾问 Skill",
         "local_path": str(local_path),
         "local_exists": local_path.exists(),
         "local_name": local_name,
@@ -400,7 +440,7 @@ def print_status(status: dict, as_json: bool) -> None:
         print(json.dumps(output, ensure_ascii=False, indent=2))
         return
 
-    print("RentPro Skill 更新检查")
+    print(f"{status['display_name']} 更新检查")
     print(f"本地版本：{status['local_version'] or '未安装/未知'}")
     print(f"远端版本：{status['latest_version']}")
     print(f"manifest schema：{status['manifest_schema_version']}")
@@ -412,7 +452,7 @@ def print_status(status: dict, as_json: bool) -> None:
     if status["release_notes"]:
         print(f"更新说明：{status['release_notes']}")
     if status["update_available"]:
-        print("RentPro 顾问 Skill 有新版本，请对我说：更新到最新版本")
+        print(f"{status['display_name']} 有新版本，请对我说：更新到最新版本")
         print("管理员可执行：python3 scripts/rentpro_skill_update.py update")
 
 
@@ -490,7 +530,24 @@ def update_installed_skill(
 
     # Download and validate every file before changing the local installation.
     for item in manifest.get("_files") or manifest_files(manifest):
-        content = decode_github_content(fetch_url(item.download_url, token, timeout))
+        urls = [item.download_url]
+        if item.fallback_download_url:
+            urls.append(item.fallback_download_url)
+        if urlparse(item.download_url).hostname in CLOUD_HOSTS:
+            urls.append(github_file_url(item.path, manifest["source_ref"]))
+        elif urlparse(item.download_url).hostname in GITHUB_HOSTS:
+            version = manifest.get("latest_version", "0.18.4").lstrip("vV")
+            urls.append(cloud_file_url(item.path, version))
+        content = None
+        errors = []
+        for download_url in dict.fromkeys(urls):
+            try:
+                content = decode_github_content(fetch_url(download_url, token, timeout))
+                break
+            except UpdateError as exc:
+                errors.append(str(exc))
+        if content is None:
+            raise UpdateError(f"下载文件 {item.path} 失败：" + "；".join(errors))
         actual_digest = sha256_bytes(content)
         if actual_digest != item.sha256:
             raise UpdateError(
@@ -624,7 +681,10 @@ def command_update(args: argparse.Namespace) -> int:
         status["_manifest"],
         args.timeout,
     )
-    print(f"已更新 RentPro Skill 包到 {status['latest_version']}：{args.local_skill.parent}")
+    print(
+        f"已更新 {status['display_name']} 到 {status['latest_version']}："
+        f"{args.local_skill.parent}"
+    )
     if previous:
         print(f"旧文件已备份：{previous}")
     print("请刷新或重启 WorkBuddy 以加载新 Skill。")

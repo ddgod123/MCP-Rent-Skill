@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.4
+
+- 普通安装默认改为 Skill-only，不再向用户询问 MCP Bearer Token 或修改宿主 MCP 配置。
+- 管理员可通过受保护的 `--token-file` 或 `--token-env` 显式配置 MCP。
+- 保留生产 MCP Bearer 鉴权和匿名 `session_token` 业务会话机制。
+
+## 0.18.3
+
+- 增加展示名称“Mike的房源库 Skill（北京租房）”，技术标识 `rentpro-rent`、MCP 服务名和 WorkBuddy 配置键保持不变。
+- 安装器在 WorkBuddy MCP 配置中保留展示名称，并将当前安装提示改为中文项目名。
+
 ## 0.18.1
 
 - 将公网 MCP + Skill 安装器纳入公开发布包，安装命令固定到不可变版本 tag。
