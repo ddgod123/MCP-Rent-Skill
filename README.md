@@ -111,7 +111,7 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.18.4
+Skill: rentpro-rent 0.18.5
 展示名称：Mike的房源库 Skill（北京租房）
 最低 MCP: 0.17.0
 更新通道: stable

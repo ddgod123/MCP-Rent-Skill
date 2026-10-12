@@ -3,8 +3,8 @@ set -eu
 
 # Small, verified bootstrap used by the public website. The Python installer
 # performs the full manifest and per-file SHA-256 verification afterwards.
-base='https://smartrent.xin/skill/rentpro-rent/v0.18.4'
-fallback='https://raw.githubusercontent.com/ddgod123/MCP-Rent-Skill/rentpro-rent-v0.18.4'
+base='https://smartrent.xin/skill/rentpro-rent/v0.18.5'
+fallback='https://raw.githubusercontent.com/ddgod123/MCP-Rent-Skill/rentpro-rent-v0.18.5'
 tmp="${TMPDIR:-/tmp}/rentpro-skill-bootstrap.$$"
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 mkdir -p "$tmp"
@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 target = pathlib.Path(sys.argv[1])
 base = sys.argv[2]
-fallback = "https://raw.githubusercontent.com/ddgod123/MCP-Rent-Skill/rentpro-rent-v0.18.4"
+fallback = "https://raw.githubusercontent.com/ddgod123/MCP-Rent-Skill/rentpro-rent-v0.18.5"
 for name in ("install_rentpro.py", "rentpro_skill_update.py"):
     content = None
     for url in (f"{base}/{name}", f"{fallback}/{name}"):

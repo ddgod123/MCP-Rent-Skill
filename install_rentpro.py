@@ -24,7 +24,7 @@ from urllib.request import Request, urlopen
 
 DEFAULT_ENDPOINT = "https://mcp.smartrent.xin/mcp"
 DEFAULT_MANIFEST = (
-    "https://smartrent.xin/skill/rentpro-rent/v0.18.4/"
+    "https://smartrent.xin/skill/rentpro-rent/v0.18.5/"
     "rentpro_skill_release.json"
 )
 SERVER_NAME = "rentpro"

@@ -29,12 +29,12 @@ SKILL_NAME = "rentpro-rent"
 REMOTE_SKILL_RELATIVE_PATH = "SKILL.md"
 PROJECT_SKILL_RELATIVE_PATH = "skills/rentpro-rent/SKILL.md"
 DEFAULT_MANIFEST_URL = (
-    "https://smartrent.xin/skill/rentpro-rent/v0.18.4/"
+    "https://smartrent.xin/skill/rentpro-rent/v0.18.5/"
     "rentpro_skill_release.json"
 )
 DEFAULT_GITHUB_MANIFEST_URL = (
     f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
-    "rentpro_skill_release.json?ref=rentpro-rent-v0.18.4"
+    "rentpro_skill_release.json?ref=rentpro-rent-v0.18.5"
 )
 DEFAULT_LOCAL_SKILL = Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
 PROJECT_SKILL_CANDIDATES = (
