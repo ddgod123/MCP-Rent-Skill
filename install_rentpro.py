@@ -23,10 +23,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_ENDPOINT = "https://mcp.smartrent.xin/mcp"
-DEFAULT_MANIFEST = (
-    "https://smartrent.xin/skill/rentpro-rent/v0.18.5/"
-    "rentpro_skill_release.json"
-)
+DEFAULT_MANIFEST = "https://api.smartrent.xin/api/public/rentpro-install"
 SERVER_NAME = "rentpro"
 DISPLAY_NAME = "Mike的房源库 Skill（北京租房）"
 
@@ -81,7 +78,6 @@ def skill_update(manifest_url: str) -> None:
             manifest_url,
             "update",
             "--yes",
-            "--force",
         ],
         check=True,
     )
@@ -131,7 +127,7 @@ def healthcheck(endpoint: str) -> None:
     print(f"健康检查通过：{health}")
 
 
-def install_workbuddy(endpoint: str, token: str, install_skill: bool) -> None:
+def install_workbuddy(endpoint: str, token: str, install_skill: bool, manifest_url: str = DEFAULT_MANIFEST) -> None:
     path = workbuddy_config()
     config = read_json(path)
     servers = config.setdefault("mcpServers", {})
@@ -150,7 +146,7 @@ def install_workbuddy(endpoint: str, token: str, install_skill: bool) -> None:
         print(f"已备份旧配置：{old}")
     print(f"已写入 WorkBuddy MCP 配置：{path}")
     if install_skill:
-        skill_update(DEFAULT_MANIFEST)
+        skill_update(manifest_url)
         print(f"已安装/更新 Skill：{DISPLAY_NAME}")
 
 
@@ -184,6 +180,8 @@ def main() -> int:
         help="目标宿主；未知宿主使用 generic 输出配置模板",
     )
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
+    parser.add_argument("--manifest-url", default=DEFAULT_MANIFEST,
+                        help="默认从官网发现最新版；可指定固定版本清单")
     parser.add_argument(
         "--token",
         help="MCP Bearer Token（不推荐，会出现在 shell 历史中）",
@@ -231,7 +229,7 @@ def main() -> int:
             raise RuntimeError("只配置 MCP 时必须显式传 --configure-mcp")
         if args.token or args.token_file or args.token_env:
             raise RuntimeError("如需配置 MCP，请显式传 --configure-mcp")
-        skill_update(DEFAULT_MANIFEST)
+        skill_update(args.manifest_url)
         print(f"已安装 Skill：{DISPLAY_NAME}（未配置 MCP）")
     else:
         if not args.endpoint.startswith("https://"):
@@ -243,11 +241,11 @@ def main() -> int:
         if not args.skip_healthcheck:
             healthcheck(args.endpoint)
         if args.host == "workbuddy":
-            install_workbuddy(args.endpoint, token, not args.skip_skill)
+            install_workbuddy(args.endpoint, token, not args.skip_skill, args.manifest_url)
         else:
             print_generic_config(args.endpoint)
             if not args.skip_skill:
-                skill_update(DEFAULT_MANIFEST)
+                skill_update(args.manifest_url)
                 print(f"已安装/更新 Skill：{DISPLAY_NAME}")
     print("安装完成。请重启或刷新宿主的 MCP/Skill 配置。")
     return 0

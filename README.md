@@ -36,10 +36,10 @@ python3 "$HOME/.rentpro/mcp-client/install_rentpro.py" \
 该宿主的官方方式配置 MCP，不要让普通用户
 接触 Bearer Token。
 
-MCP endpoint：
+公开 MCP endpoint（无需 Bearer Token）：
 
 ```text
-https://mcp.smartrent.xin/mcp
+https://mcp.smartrent.xin/public-mcp
 ```
 
 安装位置：
@@ -58,7 +58,12 @@ https://mcp.smartrent.xin/mcp
 
 ## 检查更新
 
-更新器只访问固定的公开仓库，并校验 Skill 名称、版本和 SHA-256：
+每个新会话首次加载时，宿主调用只读工具 `check_rentpro_skill_update` 比较已加载的 Skill 版本。
+发现新版后，将统一安装地址发送给宿主，更新原 Skill，校验文件 SHA-256，再刷新 Skill 和 MCP 工具列表。
+宿主未确认更新成功前，不应声称已完成。宿主不支持原位更新时，在其 Skill 管理界面重新导入或替换。
+
+开发者和管理员可使用以下更新器命令。它每次从统一安装入口发现最新版，再按固定版本清单下载，
+逐文件校验 SHA-256；入口不可用时从固定公开仓库发现当前版本，不会把下载切换到其他版本：
 
 ```bash
 python3 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py check
@@ -72,22 +77,10 @@ python3 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py update --yes
 
 更新器会先备份旧文件，再原子替换新 Skill。完成后刷新或重启 WorkBuddy。
 
-宿主也可以把下面的逻辑接入启动或首次加载流程：
-
-```text
-检查一次版本
-    ↓
-有新版本时提示管理员：
-“RentPro 顾问 Skill 有新版本，请对我说：更新到最新版本”
-    ↓
-用户确认
-    ↓
-执行 update --yes
-    ↓
-刷新 Skill
-```
-
-不要在每轮租客咨询中重复检查版本，也不要把版本信息展示给普通租客。
+不要在每轮租客咨询中重复检查版本，也不要要求普通用户运行这些终端命令。
+`0.18.6` 及更早版本的脚本默认地址固定旧版本，需要通过统一安装地址更新一次。
+安装 `0.18.7` 后，默认 `check/update` 会发现后续版本，不再需要手动传入 `--manifest-url`。
+指定版本清单时，备用下载源只允许同一版本；`--force` 只能重装同版或升级，不能降级。
 
 ## 文件说明
 
@@ -111,11 +104,12 @@ rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
 ## 当前版本
 
 ```text
-Skill: rentpro-rent 0.18.5
+Skill: rentpro-rent 0.18.7
 展示名称：Mike的房源库 Skill（北京租房）
 最低 MCP: 0.17.0
 更新通道: stable
 ```
 
 正式发布要求：先在本仓库创建 `rentpro-rent-vX.Y.Z` 不可变 tag，发布脚本的
-`--source-ref` 必须传该 tag 或 40 位 commit SHA。稳定通道不会从 `main` 等可变分支下载。
+`--source-ref` 必须传该 tag 或 40 位 commit SHA。最新版发现入口可以更新，
+稳定通道的实际文件下载固定到版本目录与不可变引用，并逐文件校验 SHA-256。

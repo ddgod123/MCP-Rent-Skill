@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -28,13 +28,10 @@ REPO_NAME = "MCP-Rent-Skill"
 SKILL_NAME = "rentpro-rent"
 REMOTE_SKILL_RELATIVE_PATH = "SKILL.md"
 PROJECT_SKILL_RELATIVE_PATH = "skills/rentpro-rent/SKILL.md"
-DEFAULT_MANIFEST_URL = (
-    "https://smartrent.xin/skill/rentpro-rent/v0.18.5/"
-    "rentpro_skill_release.json"
-)
+DEFAULT_MANIFEST_URL = "https://api.smartrent.xin/api/public/rentpro-install"
 DEFAULT_GITHUB_MANIFEST_URL = (
     f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
-    "rentpro_skill_release.json?ref=rentpro-rent-v0.18.5"
+    "rentpro_skill_release.json?ref=main"
 )
 DEFAULT_LOCAL_SKILL = Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
 PROJECT_SKILL_CANDIDATES = (
@@ -138,6 +135,8 @@ def _github_token() -> str | None:
 
 
 def validate_download_url(value: str) -> None:
+    if value == DEFAULT_MANIFEST_URL:
+        return
     parsed = urlparse(value)
     if parsed.scheme != "https" or parsed.hostname not in (GITHUB_HOSTS | CLOUD_HOSTS):
         raise UpdateError(
@@ -169,11 +168,11 @@ def fetch_url(url: str, token: str | None, timeout: float) -> bytes:
     request = Request(
         url,
         headers={
-            "Accept": "application/vnd.github.raw+json",
+            "Accept": "application/json" if url == DEFAULT_MANIFEST_URL else "application/vnd.github.raw+json",
             "User-Agent": "rentpro-skill-updater/2.0",
         },
     )
-    if token:
+    if token and urlparse(url).hostname == "api.github.com":
         request.add_header("Authorization", f"Bearer {token}")
     try:
         with urlopen(request, timeout=timeout) as response:
@@ -316,13 +315,52 @@ def manifest_files(manifest: dict) -> list[ManifestFile]:
     return result
 
 
+def manifest_candidates(url: str) -> tuple[list[str], str | None]:
+    """Only fall back between mirrors of the explicitly selected release."""
+    candidates = [url]
+    parsed = urlparse(url)
+    version = None
+    if parsed.hostname in CLOUD_HOSTS:
+        match = re.fullmatch(r"/skill/rentpro-rent/v([0-9]+\.[0-9]+\.[0-9]+)/rentpro_skill_release\.json", parsed.path)
+        if match:
+            version = match.group(1)
+            candidates.append(github_file_url("rentpro_skill_release.json", f"rentpro-rent-v{version}"))
+    elif parsed.hostname == "api.github.com" and parsed.path == f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/rentpro_skill_release.json":
+        ref = parse_qs(parsed.query).get("ref", [""])[0]
+        match = re.fullmatch(r"rentpro-rent-v([0-9]+\.[0-9]+\.[0-9]+)", ref)
+        if match:
+            version = match.group(1)
+            candidates.append(cloud_file_url("rentpro_skill_release.json", version))
+    return candidates, version
+
+
 def load_manifest(url: str, timeout: float) -> dict:
     token = _github_token()
-    candidates = [url]
-    if url == DEFAULT_MANIFEST_URL or urlparse(url).hostname in CLOUD_HOSTS:
-        candidates.append(DEFAULT_GITHUB_MANIFEST_URL)
-    elif url == DEFAULT_GITHUB_MANIFEST_URL:
-        candidates.append(DEFAULT_MANIFEST_URL)
+    expected_version = None
+    if url == DEFAULT_MANIFEST_URL:
+        try:
+            descriptor_raw = fetch_url(url, None, timeout)
+        except UpdateError:
+            # The public repo's current manifest is a discovery pointer only;
+            # all package downloads still use its immutable ref and SHA-256.
+            url = DEFAULT_GITHUB_MANIFEST_URL
+        else:
+            try:
+                descriptor = json.loads(descriptor_raw)
+            except json.JSONDecodeError as exc:
+                raise UpdateError("安装入口不是有效 JSON") from exc
+            if not isinstance(descriptor, dict) or descriptor.get("skill_name") != SKILL_NAME:
+                raise UpdateError("安装入口的 Skill 标识无效")
+            expected_version = descriptor.get("version")
+            if not isinstance(expected_version, str):
+                raise UpdateError("安装入口缺少版本号")
+            parse_version(expected_version)
+            expected_version = expected_version.lstrip("vV")
+            url = descriptor.get("manifest_url")
+            if url != cloud_file_url("rentpro_skill_release.json", expected_version):
+                raise UpdateError("安装入口必须指向同一版本的固定云端清单")
+    candidates, pinned_version = manifest_candidates(url)
+    expected_version = expected_version or pinned_version
     raw = None
     errors = []
     for candidate in dict.fromkeys(candidates):
@@ -349,6 +387,8 @@ def load_manifest(url: str, timeout: float) -> dict:
     if not isinstance(latest_version, str):
         raise UpdateError("manifest 缺少 latest_version")
     parse_version(latest_version)
+    if expected_version and latest_version.lstrip("vV") != expected_version:
+        raise UpdateError("下载的清单版本与所选版本不一致，已停止更新")
     files = manifest_files(manifest)
     manifest["_files"] = files
     manifest["_manifest_source_url"] = url
@@ -428,6 +468,7 @@ def build_status(local_path: Path, manifest_url: str, timeout: float) -> dict:
         "update_available": update_available,
         "reason": reason,
         "manifest_url": manifest_url,
+        "resolved_manifest_url": manifest["_manifest_source_url"],
         "download_url": skill_item.download_url,
         "release_notes": manifest.get("release_notes", ""),
         "_manifest": manifest,
@@ -663,6 +704,8 @@ def command_check(args: argparse.Namespace) -> int:
 
 def command_update(args: argparse.Namespace) -> int:
     status = build_status(args.local_skill, args.manifest_url, args.timeout)
+    if status["local_version"] and parse_version(status["local_version"]) > parse_version(status["latest_version"]):
+        raise UpdateError("本地版本高于远端清单，禁止降级；--force 仅用于重装同版或升级")
     if not status["update_available"] and not args.force:
         print_status(status, args.json)
         return 0
@@ -703,7 +746,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--manifest-url",
         default=DEFAULT_MANIFEST_URL,
-        help="固定 RentPro GitHub manifest 地址",
+        help="默认通过官网安装入口发现最新版；也可指定固定版本清单",
     )
     parser.add_argument(
         "--local-skill",
