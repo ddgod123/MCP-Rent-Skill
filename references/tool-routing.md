@@ -5,20 +5,20 @@
 
 ## 何时读取
 
-当任务涉及需求上下文读取、需求确认、深度筛选目录、房源详情或房源比较时，读取本文件。
+当任务涉及需求上下文读取、需求确认、深度筛选目录或房源详情时，读取本文件。
 主搜索、深度筛选整组替换、房源浏览工作区和留资流程仍以 `SKILL.md` 中的常驻规则为准。
 
 ## 身份与引用约束
 
 - 需求相关工具推荐只传当前对话的 `session_token`；如果同时传 `demand_id`，必须再传属于同一需求的
   `session_token`。新对话不得复用旧令牌。
-- 搜索结果对宿主返回 `listing_ref`。详情、比较和留资工具的真实参数分别是 `listing_id`、`listing_ids`、
+- 搜索结果对宿主返回 `listing_ref`。详情和留资工具的真实参数分别是 `listing_id`、
   `listing_id`/`interested_listings`；传入对应的 `listing_ref` 数字值即可，不要传参数名 `listing_ref`，也不得向客户展示这些值。
 
 ## `list_release_properties`
 
 - **调**：用户选择菜单 `2`，询问“你们业务盘是哪些小区”“你们做哪些小区”“目前有哪些豪宅楼盘有出租房源”“哪些区有你们的房源”等当前业务范围问题，或没有给出楼盘名/个人条件的宽泛问题“现在有房吗”。
-- **不调**：用户明确问单个楼盘的具体在租挂牌时，改用 `search_listings(property_name=..., mode=list)`；用户只问代表项目时引用静态代表项目名单。
+- **不调**：用户明确问单个楼盘的具体在租挂牌时，改用 `search_listings(property_name=...)`；用户只问代表项目时引用静态代表项目名单。
 - **只读边界**：不需要 `session_token`，不创建或修改需求，不改变直查队列；返回的是运营在管理后台当前发布到 MCP 的楼盘范围，不是全北京楼盘全集。
 - **读结果**：按 `districts[].properties[].business_district` 分组为区→商圈→楼盘表，展示 `listing_count`、`primary_layout` 和 `rent_range`。`listing_count=0` 写“暂无可展示在租房源”；空的文案字段写“待运营补充”。
 - **禁止推断**：不得从 `avg_rent_level`、推断价、房源标题或户型明细自行生成主力户型和租金文案；不得把业务范围楼盘说成当前有房。
@@ -39,7 +39,7 @@
 - **只能传**：只传 `get_property_filter_catalog` 返回的严格条件编码；当前严格条件还包括 `property_ring.zone`（目录明确区域/沿线值）、`house_type.is_5plus_bedroom=true`、`house_type.is_300plus_sqm=true`、`house_type.bedroom_count`、`house_type.area` 和 `house_type.elevator_per_household="1梯1户"`。布尔条件使用 `eq`；标准层高和户型数值使用 `gt`/`gte`/`lt`/`lte`/`eq`；交付日期比较使用 `YYYY-MM-DD`，用户说“近 N 年内”时使用 `operator=within_years` 和整数年数；面积单位为㎡，居室单位为室。“高于/低于”分别用 `gt`/`lt`，“至少/至多”分别用 `gte`/`lte`。
 - **组合语义**：同一请求中的条件默认 AND；楼盘条件在楼盘上判断，多个户型条件必须在同一真实户型上同时满足。缺失字段、面积区间或标签冲突不命中并按未知处理，不把 NULL 解释为 false。需要同时设置数值上下限时，可分别传 `gte` 和 `lte`，不要重复同一运算符。
 - **读结果**：按 `districts[].properties[]` 的区→商圈→楼盘层级展示 `listing_count`、`primary_layout`、`rent_range`、`matched_facts`、`matched_house_types` 和 `property_url`；`matched_count`、`unknown_count`、`scope_count` 原样用于说明覆盖范围。`matched_house_types` 只表示存在同一户型满足全部户型条件，不把它写成整盘属性或当前有房；环线事实只使用返回的 `matched_facts`，不要展示内部关系字段；不要把 `listing_count` 当作筛选命中条件或房源详情。
-- **不调**：用户已经点名某楼盘要看当前在租房源时，改用 `search_listings(property_name=..., mode=list)`；用户要求按预算/居室/面积找具体挂牌时，走租房需求或挂牌搜索。客户说“私密”时不能把词直接当成“管理严格”，应明确采用一梯一户这一可核验方向。
+- **不调**：用户已经点名某楼盘要看当前在租房源时，改用 `search_listings(property_name=...)`；用户要求按预算/居室/面积找具体挂牌时，走租房需求或挂牌搜索。客户说“私密”时不能把词直接当成“管理严格”，应明确采用一梯一户这一可核验方向。
 - **失败时**：将“不支持/待治理/格式错误”的条件原样转为可理解的提示，不删除条件、不放宽条件、不改用挂牌搜索冒充楼盘筛选。
 
 ### 实体距离规则
@@ -119,17 +119,6 @@
   `listing_ref` 写成工具参数，也不能凭楼盘名自行猜 ID。
 - **读结果**：只展示用户问到的字段和服务端缺失提示；“还在不在”只能表述为当前查询可展示或需人工核验。
 - **失败时**：说明详情暂时无法读取或需要人工核验，不凭楼盘名猜 ID，也不拿旧结果承诺实时可租。
-
-## `compare_listings`
-
-- **调**：用户明确点名 2–5 套房源并要求比较时。
-- **不调**：用户只是问“怎么选”但尚未选定房源；先返回列表或询问具体房源。
-- **只能传**：用户点名或此前搜索结果中的房源；`dimensions` 只传用户关心的维度，默认租金、户型、
-  面积和居室。
-- 工具真实参数为 `listing_ids`，必须传 2 至 5 个不重复的房源数字 ID；这些 ID 只能来自用户点名后已解析的房源或此前搜索结果，
-  不得为凑足数量重新搜索或替换候选。
-- **读结果**：读取 `listings[].values` 与 `listings[].missing`；缺失值说“待确认”，不能当作缺点。
-- **失败时**：说明所选房源需要人工核验，不要换成别的房源重搜或自行补齐比较值。
 
 ## `request_viewing`
 
