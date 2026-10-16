@@ -33,9 +33,28 @@ def skill_version() -> str:
     return match.group(1)
 
 
+def release_notes(version: str) -> str:
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entries = re.findall(rf"(?ms)^## {re.escape(version)}\s*\n(.*?)(?=^## |\Z)", changelog)
+    assert len(entries) == 1 and entries[0].strip(), f"CHANGELOG must contain one nonempty entry for {version}"
+    return entries[0].strip()
+
+
+def validate_documentation(manifest: dict) -> str:
+    version = manifest["latest_version"]
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert re.search(rf"(?m)^Skill: rentpro-rent {re.escape(version)}\s*$", readme), "README Skill version differs"
+    minimum = manifest.get("mcp_min_version", "")
+    assert minimum and re.search(rf"(?m)^最低 MCP: {re.escape(minimum)}\s*$", readme), "README minimum MCP differs"
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    assert re.search(rf"(?m)^\s+mcp_min_version:\s*{re.escape(minimum)}\s*$", skill), "SKILL minimum MCP differs"
+    return release_notes(version)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate RentPro Skill release metadata")
     parser.add_argument("--tag", help="Expected immutable release tag")
+    parser.add_argument("--release-notes", action="store_true", help="Print the validated CHANGELOG entry for GitHub Release")
     args = parser.parse_args()
 
     manifest = json.loads((ROOT / "rentpro_skill_release.json").read_text(encoding="utf-8"))
@@ -49,6 +68,7 @@ def main() -> int:
     version = manifest.get("latest_version")
     assert source_match.group("version") == version, "tag and manifest version differ"
     assert skill_version() == version, "SKILL.md and manifest version differ"
+    notes = validate_documentation(manifest)
     if args.tag:
         assert args.tag == source_ref, f"tag {args.tag!r} does not match manifest source_ref {source_ref!r}"
 
@@ -69,8 +89,12 @@ def main() -> int:
         assert isinstance(fallback, str) and urlparse(fallback).netloc == "api.github.com", f"missing GitHub fallback URL: {path}"
         assert parse_qs(urlparse(fallback).query).get("ref") == [source_ref], f"fallback ref mismatch: {path}"
 
+    if args.release_notes:
+        print(notes)
+        return 0
     subprocess.run([sys.executable, "-m", "py_compile", "install_rentpro.py", "rentpro_skill_update.py", "scripts/validate_release.py"], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "install_rentpro.py", "--help"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "scripts", "-p", "test_*.py"], cwd=ROOT, check=True)
     print(f"release OK: {manifest['skill_name']} {version} ({source_ref})")
     return 0
 

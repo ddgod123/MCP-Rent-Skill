@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -66,7 +67,18 @@ def workbuddy_config() -> Path:
     return Path.home() / ".workbuddy" / "connectors" / "default" / "mcp.json"
 
 
-def skill_update(manifest_url: str) -> None:
+def target_module():
+    script = Path(__file__).with_name("rentpro_skill_update.py")
+    spec = importlib.util.spec_from_file_location("rentpro_install_target", script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"找不到 Skill 更新器：{script}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def skill_update(manifest_url: str, local_skill: Path) -> None:
     script = Path(__file__).with_name("rentpro_skill_update.py")
     if not script.exists():
         raise RuntimeError(f"找不到 Skill 更新器：{script}")
@@ -76,6 +88,8 @@ def skill_update(manifest_url: str) -> None:
             str(script),
             "--manifest-url",
             manifest_url,
+            "--local-skill",
+            str(local_skill),
             "update",
             "--yes",
         ],
@@ -127,7 +141,7 @@ def healthcheck(endpoint: str) -> None:
     print(f"健康检查通过：{health}")
 
 
-def install_workbuddy(endpoint: str, token: str, install_skill: bool, manifest_url: str = DEFAULT_MANIFEST) -> None:
+def install_workbuddy(endpoint: str, token: str) -> None:
     path = workbuddy_config()
     config = read_json(path)
     servers = config.setdefault("mcpServers", {})
@@ -145,9 +159,6 @@ def install_workbuddy(endpoint: str, token: str, install_skill: bool, manifest_u
     if old:
         print(f"已备份旧配置：{old}")
     print(f"已写入 WorkBuddy MCP 配置：{path}")
-    if install_skill:
-        skill_update(manifest_url)
-        print(f"已安装/更新 Skill：{DISPLAY_NAME}")
 
 
 def print_generic_config(endpoint: str) -> None:
@@ -175,10 +186,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--host",
-        choices=("workbuddy", "generic"),
-        default="workbuddy",
-        help="目标宿主；未知宿主使用 generic 输出配置模板",
+        default="auto",
+        help="目标宿主；默认从已安装位置识别，首次安装需宿主传入名称或实际目录",
     )
+    target_args = parser.add_mutually_exclusive_group()
+    target_args.add_argument("--skill-dir", type=Path, help="当前宿主中 rentpro-rent 的实际安装目录")
+    target_args.add_argument("--local-skill", type=Path, help="当前宿主的 SKILL.md 路径")
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--manifest-url", default=DEFAULT_MANIFEST,
                         help="默认从官网发现最新版；可指定固定版本清单")
@@ -207,7 +220,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-mcp",
         action="store_true",
-        help="兼容参数：只安装 Skill，不修改 WorkBuddy MCP 配置，也不需要 Token",
+        help="兼容参数：只安装 Skill，不修改宿主 MCP 配置，也不需要 Token",
     )
     parser.add_argument(
         "--skip-skill",
@@ -224,12 +237,20 @@ def main() -> int:
     if args.configure_mcp and args.skip_mcp:
         raise RuntimeError("--configure-mcp 与 --skip-mcp 不能同时使用")
 
+    resolver = target_module()
+    try:
+        target = resolver.resolve_install_target(
+            args.host, args.local_skill, args.skill_dir, script_path=Path(__file__),
+        )
+    except resolver.UpdateError as exc:
+        raise RuntimeError(str(exc)) from exc
+
     if not args.configure_mcp:
         if args.skip_skill:
             raise RuntimeError("只配置 MCP 时必须显式传 --configure-mcp")
         if args.token or args.token_file or args.token_env:
             raise RuntimeError("如需配置 MCP，请显式传 --configure-mcp")
-        skill_update(args.manifest_url)
+        skill_update(args.manifest_url, target.local_skill)
         print(f"已安装 Skill：{DISPLAY_NAME}（未配置 MCP）")
     else:
         if not args.endpoint.startswith("https://"):
@@ -240,13 +261,15 @@ def main() -> int:
 
         if not args.skip_healthcheck:
             healthcheck(args.endpoint)
-        if args.host == "workbuddy":
-            install_workbuddy(args.endpoint, token, not args.skip_skill, args.manifest_url)
+        if target.host == "workbuddy":
+            install_workbuddy(args.endpoint, token)
         else:
             print_generic_config(args.endpoint)
-            if not args.skip_skill:
-                skill_update(args.manifest_url)
-                print(f"已安装/更新 Skill：{DISPLAY_NAME}")
+            print("当前宿主的 MCP 连接请通过其官方配置入口应用；未自动写入其他应用。")
+        if not args.skip_skill:
+            skill_update(args.manifest_url, target.local_skill)
+            print(f"已安装/更新 Skill：{DISPLAY_NAME}")
+    print(f"目标宿主：{target.host}；Skill 位置：{target.local_skill.parent}")
     print("安装完成。请重启或刷新宿主的 MCP/Skill 配置。")
     return 0
 

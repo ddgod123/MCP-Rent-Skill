@@ -1,115 +1,102 @@
 # Mike的房源库 Skill（北京租房）
 
-技术标识：`rentpro-rent`。这是 RentPro 的宿主侧租房顾问行为层，面向北京高端住宅租赁。
+`rentpro-rent` 是 RentPro 的宿主侧租房顾问行为层，负责需求收集、MCP 工具路由与客户回复规范。
+真实挂牌由 RentPro MCP 提供；公开 Skill 包不包含数据库、生产数据或密钥。
 
-`rentpro-rent` 是 RentPro 的宿主侧行为层，面向 WorkBuddy、Codex、Claude 等支持
-Skill/系统指令的 MCP 宿主。它负责租房意图识别、首轮菜单、需求收集、需求上下文维护、
-MCP 工具选择和客户侧回复边界。
+## 安装与更新
 
-真实挂牌数据由 RentPro MCP 服务提供。本仓库不包含数据库、后端服务、生产数据、图片
-密钥或内部治理文档。
-
-## 安装 Skill 与 MCP
-
-普通用户不需要注册、终端、脚本或 MCP Token。请把下面这个宿主安装地址直接发送给
-WorkBuddy 等支持 Skill 导入的 AI 宿主：
+将以下地址发送给当前使用的、支持 Skill 导入的 AI 宿主：
 
 ```text
 https://api.smartrent.xin/api/public/rentpro-install
 ```
 
-宿主会从该地址读取结构化安装描述。未知宿主不应
-盲目修改本地配置文件；请让宿主管理员按其官方接入方式配置 MCP。
-
-管理员在受信任终端配置 MCP 时，使用受保护的 Token 文件：
-
-```bash
-python3 "$HOME/.rentpro/mcp-client/install_rentpro.py" \
-  --host workbuddy \
-  --configure-mcp \
-  --token-file "$HOME/.config/rentpro/mcp-token"
-```
-
-不要把 MCP Token 发给普通用户，也不要写入命令行、Git、截图或聊天。
-
-其他支持 MCP/Skill 的宿主可以直接发送上面的宿主安装地址。若宿主不支持 URL 导入，请让管理员按
-该宿主的官方方式配置 MCP，不要让普通用户
-接触 Bearer Token。
-
-公开 MCP endpoint（无需 Bearer Token）：
+宿主读取最新安装描述，首次安装时使用自身的 Skill 管理能力；已安装时更新本宿主原来的目录。
+逐文件校验 SHA-256，完成后刷新 Skill 和 MCP 工具列表。公开 MCP 无需 Bearer Token：
 
 ```text
 https://mcp.smartrent.xin/public-mcp
 ```
 
-安装位置：
+每个宿主拥有独立安装副本。DSH 更新不会更新 WorkBuddy，反之亦然；不要因机器上装有某个应用就选择它。
+不支持文件安装或自动配置的宿主，应通过其原生管理界面导入，不能宣称已安装或修改其他应用配置。
 
-```text
-~/.workbuddy/skills/rentpro-rent/SKILL.md
-~/.workbuddy/skills/rentpro-rent/references/tool-routing.md
-~/.workbuddy/skills/rentpro-rent/references/response-format.md
-~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py
+## 管理员脚本：选择当前宿主
+
+以下命令供具备本地执行能力的宿主或管理员使用，不要求普通租客执行。
+首次从下载目录、开发仓库或临时引导脚本安装时，必须传入目标宿主或其实际 Skill 目录。
+
+```bash
+python3 install_rentpro.py --host workbuddy
+python3 install_rentpro.py --host dsh
+python3 install_rentpro.py --host cursor
+python3 install_rentpro.py --host generic --skill-dir /absolute/path/to/skills/rentpro-rent
 ```
 
-安装完成后刷新 Skill 或重启 WorkBuddy。
+上述命令安装 Skill。公开 MCP 连接由当前宿主通过自身的配置能力添加；脚本不会猜测其他宿主的 MCP 配置结构。
+`--configure-mcp` 保留给管理员受保护端点配置，不是普通用户安装公开服务的必要步骤。
 
-从旧版单文件更新器迁移到 schema v2 时，先执行一次上述项目安装；
-旧更新器不能直接解析 v2 manifest。
+| 宿主参数 | 用户级 Skill 根目录 |
+|---|---|
+| `workbuddy` | `~/.workbuddy/skills` |
+| `dsh`（别名 `deepseek`、`deepseekharness`、`deepseek-harness`） | `~/.dsh/skills` |
+| `codex` | 优先复用已有 `~/.codex/skills` 或 `~/.agents/skills` 副本；设置 `CODEX_HOME` 时也识别其 `skills` 目录 |
+| `cursor` | `~/.cursor/skills` |
+| `qoder` | `~/.qoder/skills` |
+| `trae` | `~/.trae/skills` |
+| `claude`（别名 `claude-code`） | `~/.claude/skills` |
+| `generic` | 必须通过 `--skill-dir` 或 `--local-skill` 指定原生宿主实际目录 |
+
+以上根目录下使用 `rentpro-rent` 子目录。不同版本、项目级目录或自定义安装位置，使用明确路径。
+千问等尚未确认目录的宿主使用原生导入能力或 `generic`，不凭品牌名称猜测文件位置。
+
+目标判定顺序：明确的 `--local-skill/--skill-dir` → 明确的 `--host` → 已安装脚本所在目录 →
+宿主显式提供的 `RENTPRO_SKILL_DIR/RENTPRO_HOST`。无法判定时停止；同一宿主存在多个候选副本时要求指定路径。
+`CODEX_HOME` 只影响已选择 Codex 时的目录，不用于猜测当前宿主。
 
 ## 检查更新
 
-每个新会话首次加载时，宿主调用只读工具 `check_rentpro_skill_update` 比较已加载的 Skill 版本。
-发现新版后，将统一安装地址发送给宿主，更新原 Skill，校验文件 SHA-256，再刷新 Skill 和 MCP 工具列表。
-宿主未确认更新成功前，不应声称已完成。宿主不支持原位更新时，在其 Skill 管理界面重新导入或替换。
+每个新会话首次加载时，宿主调用只读工具 `check_rentpro_skill_update` 比较已加载版本。
+发现新版后通过统一安装地址更新当前副本，不在每轮租房咨询中重复检查。
 
-开发者和管理员可使用以下更新器命令。它每次从统一安装入口发现最新版，再按固定版本清单下载，
-逐文件校验 SHA-256；入口不可用时从固定公开仓库发现当前版本，不会把下载切换到其他版本：
+安装目录中的新版更新器自动检查、更新自身同目录的 Skill，例如：
 
 ```bash
-python3 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py check
+python3 ~/.dsh/skills/rentpro-rent/rentpro_skill_update.py check --json
+python3 ~/.dsh/skills/rentpro-rent/rentpro_skill_update.py update --yes
 ```
 
-如果发现更新，用户明确同意后执行：
+也可从开发仓库明确选择目标；全局参数应放在子命令之前：
 
 ```bash
-python3 ~/.workbuddy/skills/rentpro-rent/rentpro_skill_update.py update --yes
+python3 scripts/rentpro_skill_update.py --host dsh check --json
+python3 scripts/rentpro_skill_update.py --local-skill /absolute/path/to/rentpro-rent/SKILL.md update --yes
 ```
 
-更新器会先备份旧文件，再原子替换新 Skill。完成后刷新或重启 WorkBuddy。
+`0.18.9` 及更早的更新器默认指向 WorkBuddy。第一次迁移时必须明确指定当前宿主的 `--local-skill`，
+或由宿主按统一安装地址原位替换新版包，不能只在 DSH 目录裸跑旧更新器。
+`0.18.6` 及更早版本的更新器还固定旧发布清单，应通过统一安装地址重新导入。
 
-不要在每轮租客咨询中重复检查版本，也不要要求普通用户运行这些终端命令。
-`0.18.6` 及更早版本的脚本默认地址固定旧版本，需要通过统一安装地址更新一次。
-安装 `0.18.7` 后，默认 `check/update` 会发现后续版本，不再需要手动传入 `--manifest-url`。
-指定版本清单时，备用下载源只允许同一版本；`--force` 只能重装同版或升级，不能降级。
+更新会备份旧文件，逐文件校验并原子替换，失败时尽量回滚。不能自动降级；更新成功后仍需宿主刷新已加载内容。
+Skill、references 和更新器始终属于同一个目标目录，不能单独把更新器安装到另一款宿主。
 
-## 文件说明
+## 文件与发布规则
 
-```text
-SKILL.md                    宿主行为指令
-references/                 按需读取的工具路由与客户回复规范
-rentpro_skill_update.py     检查、安装和更新脚本
-rentpro_skill_release.json  当前发布版本和 SHA-256 manifest
-```
+安装包包括 `SKILL.md`、`references/`、`rentpro_skill_update.py` 和安装脚本。
+`rentpro_skill_release.json` 是远端发布清单，网络更新不保证将其复制到本地；项目安装可能包含该文件。
+不能依靠本地残留清单发现最新版，每次检查从统一安装入口重新获取。
 
-## 版本规则
-
-- `SKILL.md` 使用 `X.Y.Z` 版本号。
-- `mcp_min_version` 表示兼容所需的最低 MCP 版本。
-- schema v2 manifest 的 `files[*].sha256` 必须分别与公开仓库中的每个文件完全一致；
-  `SKILL.md` 的兼容字段 `sha256` 仍保留。
-- 正式稳定发布时，应将 `source_ref` 和下载地址切换到不可变 Git tag 或 Release。
-- WorkBuddy 需要安装完整多文件包才能使用 references；只复制 `SKILL.md` 的旧安装
-  仍可运行主流程，但不会具备 references 中的完整细则。
+开发仓库 `skills/rentpro-rent/` 是文档来源，发布脚本同步 README、CHANGELOG 和安装包。
+当前版本区块由发布脚本生成；发布校验同时检查版本、最低 MCP、CHANGELOG 条目和各文件 SHA-256。
+稳定文件下载固定到不可变版本 tag 或 commit。云主源失败时使用同版本 GitHub API，保留 raw 源作为额外备用。
+GitHub Release 使用对应版本的 CHANGELOG 条目。
 
 ## 当前版本
 
+<!-- release-version:start -->
 ```text
-Skill: rentpro-rent 0.18.7
-展示名称：Mike的房源库 Skill（北京租房）
-最低 MCP: 0.17.0
+Skill: rentpro-rent 0.18.10
+最低 MCP: 0.19.0
 更新通道: stable
 ```
-
-正式发布要求：先在本仓库创建 `rentpro-rent-vX.Y.Z` 不可变 tag，发布脚本的
-`--source-ref` 必须传该 tag 或 40 位 commit SHA。最新版发现入口可以更新，
-稳定通道的实际文件下载固定到版本目录与不可变引用，并逐文件校验 SHA-256。
+<!-- release-version:end -->

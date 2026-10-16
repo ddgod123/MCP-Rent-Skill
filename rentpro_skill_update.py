@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check, install and update the RentPro WorkBuddy Skill package."""
+"""Check, install and update the RentPro Skill in the selected host only."""
 from __future__ import annotations
 
 import argparse
@@ -33,14 +33,23 @@ DEFAULT_GITHUB_MANIFEST_URL = (
     f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/"
     "rentpro_skill_release.json?ref=main"
 )
-DEFAULT_LOCAL_SKILL = Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "SKILL.md"
 PROJECT_SKILL_CANDIDATES = (
     ROOT / PROJECT_SKILL_RELATIVE_PATH,
     ROOT / REMOTE_SKILL_RELATIVE_PATH,
 )
-DEFAULT_UPDATE_SCRIPT = (
-    Path.home() / ".workbuddy" / "skills" / SKILL_NAME / "rentpro_skill_update.py"
-)
+HOST_SKILL_ROOTS = {
+    "workbuddy": (".workbuddy/skills",),
+    "dsh": (".dsh/skills",),
+    "codex": (".codex/skills", ".agents/skills"),
+    "cursor": (".cursor/skills",),
+    "qoder": (".qoder/skills",),
+    "trae": (".trae/skills",),
+    "claude": (".claude/skills",),
+}
+HOST_ALIASES = {
+    "deepseek": "dsh", "deepseekharness": "dsh", "deepseek-harness": "dsh",
+    "claude-code": "claude",
+}
 GITHUB_HOSTS = {"api.github.com", "raw.githubusercontent.com"}
 CLOUD_HOSTS = {"smartrent.xin", "www.smartrent.xin"}
 VERSION_RE = re.compile(r"^[vV]?([0-9]+)\.([0-9]+)\.([0-9]+)$")
@@ -51,6 +60,95 @@ UPDATE_AVAILABLE_EXIT = 2
 
 class UpdateError(RuntimeError):
     """An expected, user-actionable update failure."""
+
+
+@dataclass(frozen=True)
+class InstallTarget:
+    host: str
+    local_skill: Path
+    source: str
+
+
+def normalize_host(host: str | None) -> str:
+    value = (host or "auto").strip().lower()
+    return HOST_ALIASES.get(value, value)
+
+
+def host_skill_roots(host: str) -> list[Path]:
+    roots = [Path.home() / path for path in HOST_SKILL_ROOTS.get(host, ())]
+    if host == "codex" and os.environ.get("CODEX_HOME"):
+        roots.insert(0, Path(os.environ["CODEX_HOME"]).expanduser() / "skills")
+    return list(dict.fromkeys(root.absolute() for root in roots))
+
+
+def host_for_path(path: Path) -> str:
+    for host in HOST_SKILL_ROOTS:
+        for root in host_skill_roots(host):
+            if path == root / SKILL_NAME / "SKILL.md":
+                return host
+    return "generic"
+
+
+def validate_target(path: Path) -> Path:
+    # Keep the chosen installation path, including host-managed symlinks.
+    path = Path(os.path.abspath(path.expanduser()))
+    if path.name != "SKILL.md":
+        raise UpdateError("--local-skill 必须指向 SKILL.md；目录请使用 --skill-dir")
+    if path.exists() and read_skill_metadata(path.read_bytes()).name != SKILL_NAME:
+        raise UpdateError(f"目标已有其他 Skill 或缺少 name，拒绝覆盖：{path}")
+    return path
+
+
+def resolve_install_target(
+    host: str | None = None,
+    local_skill: Path | None = None,
+    skill_dir: Path | None = None,
+    *,
+    script_path: Path | None = None,
+) -> InstallTarget:
+    """Resolve from explicit intent or the running installation, never other apps."""
+    requested = normalize_host(host)
+    if local_skill is not None and skill_dir is not None:
+        raise UpdateError("--local-skill 与 --skill-dir 只能选择一个")
+    if requested not in {"auto", "generic", *HOST_SKILL_ROOTS}:
+        raise UpdateError(f"未知宿主 {requested!r}；请用 --host generic --skill-dir 指定其实际目录")
+
+    explicit = local_skill if local_skill is not None else (
+        skill_dir / "SKILL.md" if skill_dir is not None else None
+    )
+    if explicit is not None:
+        path = validate_target(explicit)
+        detected = host_for_path(path)
+        if requested not in {"auto", "generic", detected} and detected != "generic":
+            raise UpdateError(f"指定宿主 {requested} 与目标目录所属宿主 {detected} 不一致")
+        return InstallTarget(detected if requested == "auto" else requested, path, "explicit_path")
+
+    # A host selection is stronger than the location of a copied installer.
+    if requested == "auto":
+        adjacent = Path(os.path.abspath(script_path or __file__)).parent / "SKILL.md"
+        if adjacent.is_file() and not (adjacent.parent / ".git").exists():
+            path = validate_target(adjacent)
+            return InstallTarget(host_for_path(path), path, "installed_script")
+        env_dir = os.environ.get("RENTPRO_SKILL_DIR", "").strip()
+        env_host = os.environ.get("RENTPRO_HOST", "").strip()
+        if env_dir or env_host:
+            if normalize_host(env_host) == "auto" and not env_dir:
+                raise UpdateError("RENTPRO_HOST 必须指定具体宿主，或设置 RENTPRO_SKILL_DIR")
+            target = resolve_install_target(env_host or "generic", skill_dir=Path(env_dir) if env_dir else None)
+            return InstallTarget(target.host, target.local_skill, "environment")
+        raise UpdateError(
+            "无法确定当前宿主。请由宿主传入 --host，或用 --skill-dir 指定当前 Skill 的实际目录；"
+            "不会根据机器上安装了哪些应用而选择其他宿主。"
+        )
+
+    if requested == "generic":
+        raise UpdateError("generic 宿主需要 --skill-dir 或 --local-skill 指定实际安装位置")
+    roots = host_skill_roots(requested)
+    existing = [root / SKILL_NAME / "SKILL.md" for root in roots if (root / SKILL_NAME / "SKILL.md").is_file()]
+    if len(existing) > 1:
+        raise UpdateError(f"{requested} 存在多个安装副本，请用 --local-skill 明确本次目标")
+    path = validate_target(existing[0] if existing else roots[0] / SKILL_NAME / "SKILL.md")
+    return InstallTarget(requested, path, "explicit_host")
 
 
 @dataclass(frozen=True)
@@ -644,6 +742,8 @@ def _project_payload(source_dir: Path) -> list[tuple[str, Path, str]]:
 
 
 def install_from_project(local_path: Path, update_script_path: Path) -> list[Path]:
+    if update_script_path.absolute() != local_path.with_name("rentpro_skill_update.py").absolute():
+        raise UpdateError("更新器必须与目标 SKILL.md 安装在同一目录，不能写入其他宿主")
     source = next(
         (candidate for candidate in PROJECT_SKILL_CANDIDATES if candidate.exists()),
         None,
@@ -692,12 +792,14 @@ def install_from_project(local_path: Path, update_script_path: Path) -> list[Pat
         print("旧文件已备份：")
         for backup in backups:
             print(f"  - {backup}")
-    print("请刷新或重启 WorkBuddy 以加载新 Skill。")
+    print("请刷新或重启当前宿主以加载新 Skill。")
     return backups
 
 
 def command_check(args: argparse.Namespace) -> int:
     status = build_status(args.local_skill, args.manifest_url, args.timeout)
+    status["host"] = getattr(args, "host", host_for_path(args.local_skill))
+    status["target_source"] = getattr(args, "target_source", "explicit_path")
     print_status(status, args.json)
     return UPDATE_AVAILABLE_EXIT if status["update_available"] else 0
 
@@ -730,7 +832,7 @@ def command_update(args: argparse.Namespace) -> int:
     )
     if previous:
         print(f"旧文件已备份：{previous}")
-    print("请刷新或重启 WorkBuddy 以加载新 Skill。")
+    print("请刷新或重启当前宿主以加载新 Skill。")
     return 0
 
 
@@ -741,19 +843,21 @@ def command_install(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="检查、安装并更新 RentPro WorkBuddy Skill 包。",
+        description="检查、安装并更新当前宿主的 RentPro Skill 包。",
     )
     parser.add_argument(
         "--manifest-url",
         default=DEFAULT_MANIFEST_URL,
         help="默认通过官网安装入口发现最新版；也可指定固定版本清单",
     )
-    parser.add_argument(
+    parser.add_argument("--host", default="auto", help="当前宿主；默认从已安装脚本目录识别，不猜选其他应用")
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument(
         "--local-skill",
         type=Path,
-        default=DEFAULT_LOCAL_SKILL,
-        help="WorkBuddy 本地 Skill 路径",
+        help="本次安装或更新的 SKILL.md 路径，优先于自动识别",
     )
+    target.add_argument("--skill-dir", type=Path, help="当前宿主中 rentpro-rent 的实际目录（含自定义宿主）")
     parser.add_argument(
         "--timeout",
         type=float,
@@ -774,13 +878,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     install = subparsers.add_parser(
         "install",
-        help="从当前项目安装 Skill、references 和更新器到 WorkBuddy",
+        help="从当前项目安装 Skill、references 和更新器到所选宿主",
     )
     install.add_argument(
         "--update-script",
         type=Path,
-        default=DEFAULT_UPDATE_SCRIPT,
-        help="更新器安装路径",
+        help="兼容参数；必须与目标 SKILL.md 同目录，默认自动跟随目标",
     )
     install.set_defaults(func=command_install)
     return parser
@@ -788,9 +891,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    args.local_skill = args.local_skill.expanduser()
+    target = resolve_install_target(args.host, args.local_skill, args.skill_dir)
+    args.local_skill = target.local_skill
+    args.host = target.host
+    args.target_source = target.source
     if hasattr(args, "update_script"):
-        args.update_script = args.update_script.expanduser()
+        args.update_script = args.update_script.expanduser() if args.update_script else args.local_skill.with_name("rentpro_skill_update.py")
     return args.func(args)
 
 

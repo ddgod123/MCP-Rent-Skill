@@ -15,5 +15,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate release metadata, hashes, and installer smoke test
+      - name: Validate release docs, hashes, and host isolation tests
         run: python3 scripts/validate_release.py
