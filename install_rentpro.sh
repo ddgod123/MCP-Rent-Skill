@@ -112,8 +112,20 @@ for name, content in staged.items():
     path = target / name
     path.write_bytes(content)
     path.chmod(0o700)
-subprocess.run([
+result = subprocess.run([
     sys.executable, str(target / "install_rentpro.py"),
     "--manifest-url", manifest_url, *sys.argv[2:],
-], check=True)
+], capture_output=True, text=True, check=False)
+if result.returncode != 0:
+    failure = next(
+        (line.strip() for line in (result.stderr or "").splitlines() + (result.stdout or "").splitlines()
+         if line.strip().startswith("[FAIL] ")),
+        None,
+    )
+    print(failure or f"[FAIL] 安装器执行失败（退出码 {result.returncode}）", file=sys.stderr)
+    raise SystemExit(result.returncode)
+if result.stdout:
+    print(result.stdout, end="")
+if result.stderr:
+    print(result.stderr, end="", file=sys.stderr)
 PY

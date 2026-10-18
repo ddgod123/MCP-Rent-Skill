@@ -7,6 +7,7 @@ import argparse
 import io
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -457,7 +458,8 @@ class HostIsolationTests(unittest.TestCase):
 
 
 class BootstrapTests(unittest.TestCase):
-    def run_bootstrap(self, directory: str, *, corrupt: bool = False, offline: bool = False):
+    def run_bootstrap(self, directory: str, *, corrupt: bool = False, offline: bool = False,
+                      installer_returncode: int = 0, installer_stderr: str = ""):
         source = SCRIPT.with_name("install_rentpro.sh").read_text().split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         manifest, contents = release_payload("0.18.8")
         pinned = MODULE.cloud_file_url("rentpro_skill_release.json", "0.18.8")
@@ -475,18 +477,47 @@ class BootstrapTests(unittest.TestCase):
             if offline and request.full_url == MODULE.DEFAULT_MANIFEST_URL:
                 raise OSError("discovery unavailable")
             return io.BytesIO(responses[request.full_url])
-        with patch("sys.argv", ["-", directory, "--skip-mcp"]), patch("urllib.request.urlopen", side_effect=open_url), patch("subprocess.run") as run:
-            exec(compile(source, "install_rentpro.sh", "exec"), {})
-            return run.call_args.args[0]
+        completed = subprocess.CompletedProcess([], installer_returncode, "", installer_stderr)
+        with patch("sys.argv", ["-", directory, "--skip-mcp"]), patch("urllib.request.urlopen", side_effect=open_url), patch(
+            "subprocess.run", return_value=completed
+        ) as run, patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            try:
+                exec(compile(source, "install_rentpro.sh", "exec"), {})
+                exit_code = 0
+            except SystemExit as exc:
+                if run.call_args is None:
+                    raise
+                exit_code = exc.code
+            return run.call_args.args[0], run.call_args.kwargs, stderr.getvalue(), exit_code
 
     def test_bootstrap_discovers_future_version_and_verifies_executables(self) -> None:
         for offline in (False, True):
             with self.subTest(offline=offline), tempfile.TemporaryDirectory() as directory:
-                command = self.run_bootstrap(directory, offline=offline)
+                command, options, _, exit_code = self.run_bootstrap(directory, offline=offline)
+                self.assertEqual(exit_code, 0)
                 self.assertEqual(Path(directory, "install_rentpro.py").read_bytes(), b"# verified installer\n")
                 self.assertIn("--skip-mcp", command)
+                self.assertTrue(options["capture_output"])
+                self.assertFalse(options["check"])
                 expected = MODULE.github_file_url("rentpro_skill_release.json", "rentpro-rent-v0.18.8") if offline else MODULE.cloud_file_url("rentpro_skill_release.json", "0.18.8")
                 self.assertEqual(command[command.index("--manifest-url") + 1], expected)
+
+    def test_bootstrap_formats_expected_installer_failure_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, _, stderr, exit_code = self.run_bootstrap(
+                directory, installer_returncode=1,
+                installer_stderr="[FAIL] 无法确定当前宿主。请传入 --host。\n",
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(stderr, "[FAIL] 无法确定当前宿主。请传入 --host。\n")
+            self.assertNotIn("Traceback", stderr)
+
+    def test_bootstrap_formats_unexpected_installer_failure_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, _, stderr, exit_code = self.run_bootstrap(directory, installer_returncode=7)
+            self.assertEqual(exit_code, 7)
+            self.assertEqual(stderr, "[FAIL] 安装器执行失败（退出码 7）\n")
+            self.assertNotIn("Traceback", stderr)
 
     def test_bootstrap_rejects_tampered_script_before_execution(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch("subprocess.run") as run:

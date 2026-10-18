@@ -88,14 +88,15 @@ Skill、references 和更新器始终属于同一个目标目录，不能单独�
 
 开发仓库 `skills/rentpro-rent/` 是文档来源，发布脚本同步 README、CHANGELOG 和安装包。
 当前版本区块由发布脚本生成；发布校验同时检查版本、最低 MCP、CHANGELOG 条目和各文件 SHA-256。
-稳定文件下载固定到不可变版本 tag 或 commit。云主源失败时使用同版本 GitHub API，保留 raw 源作为额外备用。
+稳定文件下载固定到不可变版本 tag 或 commit。文件下载依次使用云主源和同版本 GitHub API；
+发布清单发现阶段在云端不可用时使用公开 GitHub API。raw.githubusercontent.com 不属于当前自动回退链路。
 GitHub Release 使用对应版本的 CHANGELOG 条目。
 
 ## 当前版本
 
 <!-- release-version:start -->
 ```text
-Skill: rentpro-rent 0.18.10
+Skill: rentpro-rent 0.18.11
 最低 MCP: 0.19.0
 更新通道: stable
 ```
