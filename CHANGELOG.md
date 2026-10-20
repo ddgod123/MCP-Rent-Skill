@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.13
+
+- 将宿主展示名统一为“RentPro 北京高端住宅找房顾问”；技术标识 `rentpro-rent`、Mike 顾问人设、固定开场白和 MCP 连接配置不变。
+
 ## 0.18.12
 
 - 删除 Skill 中固定手机号/微信号，联系方式改由 MCP `get_manager_contact` 从服务端读取。

@@ -1,4 +1,4 @@
-# Mike的房源库 Skill（北京租房）
+# RentPro 北京高端住宅找房顾问
 
 `rentpro-rent` 是 RentPro 的宿主侧租房顾问行为层，负责需求收集、MCP 工具路由与客户回复规范。
 真实挂牌由 RentPro MCP 提供；公开 Skill 包不包含数据库、生产数据或密钥。
@@ -96,8 +96,8 @@ GitHub Release 使用对应版本的 CHANGELOG 条目。
 
 <!-- release-version:start -->
 ```text
-Skill: rentpro-rent 0.18.12
-最低 MCP: 0.19.3
+Skill: rentpro-rent 0.18.13
+最低 MCP: 0.19.4
 更新通道: stable
 ```
 <!-- release-version:end -->

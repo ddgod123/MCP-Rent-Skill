@@ -26,7 +26,7 @@ from urllib.request import Request, urlopen
 DEFAULT_ENDPOINT = "https://mcp.smartrent.xin/mcp"
 DEFAULT_MANIFEST = "https://api.smartrent.xin/api/public/rentpro-install"
 SERVER_NAME = "rentpro"
-DISPLAY_NAME = "Mike的房源库 Skill（北京租房）"
+DISPLAY_NAME = "RentPro 北京高端住宅找房顾问"
 
 
 def backup(path: Path) -> Path | None:
