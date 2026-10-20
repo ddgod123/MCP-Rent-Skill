@@ -15,6 +15,12 @@
 - 搜索结果对宿主返回 `listing_ref`。详情和留资工具的真实参数分别是 `listing_id`、
   `listing_id`/`interested_listings`；传入对应的 `listing_ref` 数字值即可，不要传参数名 `listing_ref`，也不得向客户展示这些值。
 
+## `get_manager_contact`
+
+- **调**：用户单独选择菜单 `6`，或只询问房源经理的公开联系方式。
+- **不调**：用户明确要求联系、核验、约看或让顾问跟进时，优先按 `request_viewing` 登记承接意向；不要因菜单 `6` 自动创建客资。
+- **展示**：只展示本次返回的 `manager_name`、`contact_type`、`contact_value` 和 `message`。服务端未配置联系方式时遵守 `available=false` 的文案，不使用 Skill 中的固定值或历史回复补全。
+
 ## `list_release_properties`
 
 - **调**：用户选择菜单 `2`，询问“你们业务盘是哪些小区”“你们做哪些小区”“目前有哪些豪宅楼盘有出租房源”“哪些区有你们的房源”等当前业务范围问题，或没有给出楼盘名/个人条件的宽泛问题“现在有房吗”。
@@ -124,6 +130,8 @@
 
 - 这是写入客资的工具，不是自动预约工具。菜单 `6` 不调用它；只有用户明确要求联系、核验、约看、转交顾问，
   或明确愿意登记房源兴趣时才调用。
+- 用户明确说“想联系房源经理”但尚未提供联系方式时，也可以调用以创建待补充意向；若返回
+  `contact_captured=false` 和 `supplement_form_link`，把该服务端链接发给用户补充，不自行拼接 URL。
 - 传 `demand_id` 时必须同时传同一需求的 `session_token`；已有待补充客资时传 `lead_id` 续填，有稳定宿主对话标识时传 `conversation_id`。
 - 房源参数使用 `listing_id` 或 `interested_listings`，传搜索结果 `listing_ref` 的数字值；不要向客户展示 `lead_id`、令牌或房源 ID。
 - 以返回的 `contact_captured` 和 `message` 判断话术：已捕获联系方式才可以说明顾问会人工联系；未捕获时应引导补充联系方式，
