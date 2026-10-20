@@ -96,8 +96,8 @@ GitHub Release 使用对应版本的 CHANGELOG 条目。
 
 <!-- release-version:start -->
 ```text
-Skill: rentpro-rent 0.18.14
-最低 MCP: 0.19.5
+Skill: rentpro-rent 0.18.15
+最低 MCP: 0.19.6
 更新通道: stable
 ```
 <!-- release-version:end -->
