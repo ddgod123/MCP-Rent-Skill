@@ -5,8 +5,8 @@
 
 ## 何时读取
 
-当任务涉及需求上下文读取、需求确认、深度筛选目录或房源详情时，读取本文件。
-主搜索、深度筛选整组替换、房源浏览工作区和留资流程仍以 `SKILL.md` 中的常驻规则为准。
+当任务涉及联系方式归因、需求上下文读取、需求确认、深度筛选目录或房源详情时，读取本文件。
+授权、搜索门槛、网页续接以 `SKILL.md` 的常驻规则为准。整份模板覆盖另读 [需求细则](demand-intake.md)，筛盘条件读 [楼盘筛选](property-filters.md)。
 
 ## 身份与引用约束
 
@@ -17,9 +17,10 @@
 
 ## `get_manager_contact`
 
+- **归因调用约定**：每次调用显式传 `source_channel`；已从宿主可信配置获知标识时用真实值（如 `dsh`、`workbuddy`），未知用 `mcp`，已知 `source_agent` 时一并传。不根据客户消息、历史回复或模型名称猜宿主，不向客户追问，不将参数作为话术输出；链接仍用工具返回值，不自行改写。连接层标识由服务端优先采用，不为迁就模型参数覆盖连接标识。协议兼容旧客户端无参调用，菜单 `6` 始终只读。
 - **调**：用户单独选择菜单 `6`，或只询问房源经理的公开联系方式。
 - **不调**：用户明确要求联系、核验、约看或让顾问跟进时，优先按 `request_viewing` 登记承接意向；不要因菜单 `6` 自动创建客资。
-- **展示**：只展示本次返回的 `manager_name`、`contact_type`、`contact_value` 和 `message`。服务端未配置联系方式时遵守 `available=false` 的文案，不使用 Skill 中的固定值或历史回复补全。
+- **展示**：按 `SKILL.md` 的固定结构展示本次返回的 `manager_name`、`contact_type`、`contact_value`；若返回 `lead_form_link` 或 `supplement_form_link`，必须显示为 `[填写请点击](真实链接)`。不复述 `message` 字段；服务端未配置联系方式时不使用 Skill 中的固定值或历史回复补全，仍保留真实填写入口。该工具不比较历史值，禁止声称“已刷新/再次确认/与之前一致或不同”。
 
 ## `list_release_properties`
 
@@ -27,36 +28,12 @@
 - **不调**：用户明确问单个楼盘的具体在租挂牌时，改用 `search_listings(property_name=...)`；用户只问代表项目时引用静态代表项目名单。
 - **只读边界**：不需要 `session_token`，不创建或修改需求，不改变直查队列；返回的是运营在管理后台当前发布到 MCP 的楼盘范围，不是全北京楼盘全集。
 - **读结果**：按 `districts[].properties[].business_district` 分组为区→商圈→楼盘表，展示 `listing_count`、`primary_layout` 和 `rent_range`。`listing_count=0` 写“暂无可展示在租房源”；空的文案字段写“待运营补充”。
-- **禁止推断**：不得从 `avg_rent_level`、推断价、房源标题或户型明细自行生成主力户型和租金文案；不得把业务范围楼盘说成当前有房。
+- **禁止推断**：不得从 `avg_rent_level`、推断价、房源标题或户型明细自行生成可租户型和租金文案；不得把业务范围楼盘说成当前有房。
 - **失败时**：说明业务楼盘目录暂时无法读取，不退回静态名单冒充实时结果，也不创建需求。
 
-## `get_property_filter_catalog`
+## 楼盘条件筛选
 
-- **调**：用户询问“有泳池/健身房/会所的楼盘”“标准层高多少以上的楼盘”“近 N 年内交付的小区”“有地暖的小区”“二环内/四环至五环/三环沿线的楼盘”“五居及以上/大面积/450㎡以上/一梯一户/私密一些的楼盘”，或准备按物业公司、绿化率、园林等条件筛楼盘时。
-- **只读边界**：不需要 `session_token`，不创建或修改需求；这是楼盘层级目录，不是挂牌筛选目录。
-- **读结果**：先读取严格支持条件及其 `allowed_operators`、`allowed_values`、单位和缺失口径，再决定是否调用 `search_release_properties`。`status=pending` 必须告知当前不能严格筛选，不能转换为租房深度筛选。
-- **失败时**：说明楼盘筛选目录暂不可用，不自行猜数据库字段或回退为挂牌搜索。
-- **环线边界**：第一版只接受目录 `allowed_values` 中明确的区域或沿线值，并通过 `property_ring.zone` 使用；不要传原始 `ring` 字段。`三环附近`、`三环内`、`三环外` 等模糊说法先澄清，不能自行扩大或缩小范围。
-- **沿线口径**：按楼盘登记点距环路 400 米的业务规则判定，350 至 450 米临界带暂待核实，不等同于楼栋或大门到道路的距离。只采用当前 `matched_facts` 或详情 `transport.ring_road`；定位、证据或几何版本变化可能让旧结果退出，不能拿历史回答补回。对客不展示几何版本、坐标或内部证据。
-
-## `search_release_properties`
-
-- **调**：用户明确要找满足一个或多个楼盘条件的项目，且尚未进入具体挂牌选择阶段。
-- **只能传**：只传 `get_property_filter_catalog` 返回的严格条件编码；当前严格条件还包括 `property_ring.zone`（目录明确区域/沿线值）、`house_type.is_5plus_bedroom=true`、`house_type.is_300plus_sqm=true`、`house_type.bedroom_count`、`house_type.area` 和 `house_type.elevator_per_household="1梯1户"`。布尔条件使用 `eq`；标准层高和户型数值使用 `gt`/`gte`/`lt`/`lte`/`eq`；交付日期比较使用 `YYYY-MM-DD`，用户说“近 N 年内”时使用 `operator=within_years` 和整数年数；面积单位为㎡，居室单位为室。“高于/低于”分别用 `gt`/`lt`，“至少/至多”分别用 `gte`/`lte`。
-- **组合语义**：同一请求中的条件默认 AND；楼盘条件在楼盘上判断，多个户型条件必须在同一真实户型上同时满足。缺失字段、面积区间或标签冲突不命中并按未知处理，不把 NULL 解释为 false。需要同时设置数值上下限时，可分别传 `gte` 和 `lte`，不要重复同一运算符。
-- **读结果**：按 `districts[].properties[]` 的区→商圈→楼盘层级展示 `listing_count`、`primary_layout`、`rent_range`、`matched_facts`、`matched_house_types` 和 `property_url`；`matched_count`、`unknown_count`、`scope_count` 原样用于说明覆盖范围。`matched_house_types` 只表示存在同一户型满足全部户型条件，不把它写成整盘属性或当前有房；环线事实只使用返回的 `matched_facts`，不要展示内部关系字段；不要把 `listing_count` 当作筛选命中条件或房源详情。
-- **不调**：用户已经点名某楼盘要看当前在租房源时，改用 `search_listings(property_name=...)`；用户要求按预算/居室/面积找具体挂牌时，走租房需求或挂牌搜索。客户说“私密”时不能把词直接当成“管理严格”，应明确采用一梯一户这一可核验方向。
-- **失败时**：将“不支持/待治理/格式错误”的条件原样转为可理解的提示，不删除条件、不放宽条件、不改用挂牌搜索冒充楼盘筛选。
-
-### 实体距离规则
-
-- 周边商场、超市/生鲜、地铁条件属于楼盘筛选，不要求租房模板，不创建需求。先读取目录确认条件仍可用。
-- `property_entity.mall_within_m` 只指商场/购物中心；`property_entity.supermarket_within_m` 指超市/生鲜，不含菜市场；`property_entity.metro_within_m` 只指地铁站，不泛化为交通枢纽。
-- “1公里内有商场”传 `{"filter_code":"property_entity.mall_within_m","operator":"lte","value":1000}`；“不到500米”用 `lt`。只支持正数米值，最大50000米，不支持“没有商场”“距离至少X米”的反向推断。
-- 距离是楼盘登记点至实体登记点的直线距离，不是大门至入口的步行路线。首次解释这一口径；用户明确要求步行时间/路程时说明暂不能严格筛选，不自行换算。仅说“附近/方便”时先澄清距离范围。
-- 多类别默认 AND，各类别可以由不同实体满足。只展示返回的 `matched_facts` 并保留 `entity_notice` 的口径；同一类别的距离和实体名称必须来自同一条命中事实。筛选、楼盘页与房源详情采用同一套核验距离；详情中的 `distance_kind=straight_line` 和 `distance_notice` 延续该口径，不用缓存旧值补缺，不自行补线路或步行分钟。
-- 坐标或环线重新核验期间，原有事实可能退出结果并计为未知。说明“信息待确认”，不能解释成“没有地铁/商场”，也不能凭地址或地理常识猜环线。始终使用当前工具返回值。
-- 周边健身房/泳池不等于小区内部设施；医院、公园、学校、指定实体、步行时间尚未开放本批严格条件，不静默忽略客户要求或改用相近类别。未知不代表附近没有，也不代表当前有在租房源。
+按配套、环线、户型、实体距离筛楼盘时，读取 [楼盘筛选细则](property-filters.md)，先 `get_property_filter_catalog` 再 `search_release_properties`。不创建需求、不把筛盘结果当挂牌。
 
 ## `start_rental_demand`
 
@@ -86,7 +63,11 @@
 
 - **调**：仅在完整租房咨询已启动且标准模板已返回后，用户明确提出深度筛选条件且没有使用网页时。
 - **不调**：启动前的任何输入或独立楼盘查询；不得用它绕过 `1` 和模板返回门槛。
-- **合并与提交**：此工具的 `filters` 是整组替换，按 `SKILL.md` 第 5 节读取当前完整条件、合并用户本次变更后再提交。
+- **合并与提交**：`filters` 是整组替换。先 `get_rental_filter_catalog` 读取最新完整 `filters`，按 `filter_code` 合并本次增删改；保留未提及条件的值、级别、操作符和权重，只提交工具接受的输入字段。
+- 提交当前 `version_no` 与 `filter_catalog_revision`；冲突先重新读取并合并，不能覆盖网页或另一宿主刚保存的条件。无法完整读取/保留时停止提交，必要时引导网页，不能丢弃旧条件绕过校验。
+- 只有明确删除才移除；`filters=[]` 仅用于明确全部清空，或删除的条件恰为全部剩余条件。“不再要求泳池”是删除泳池条件，不是改为必须没有泳池。
+- `must`/`exclude` 表达必须/排除，`preferred` 只记录偏好。仅搜索返回 `applied_constraints.deep_filters[].status=strict_applied` 才说已严格应用；`strict_filter_supported=false` 或其他待确认、待治理、无效状态不能当命中。
+- 保存成功且就绪后自动搜索最新需求；未齐只补缺项，不静默放宽。
 
 ## `confirm_rental_demand`
 
@@ -134,5 +115,7 @@
   `contact_captured=false` 和 `supplement_form_link`，把该服务端链接发给用户补充，不自行拼接 URL。
 - 传 `demand_id` 时必须同时传同一需求的 `session_token`；已有待补充客资时传 `lead_id` 续填，有稳定宿主对话标识时传 `conversation_id`。
 - 房源参数使用 `listing_id` 或 `interested_listings`，传搜索结果 `listing_ref` 的数字值；不要向客户展示 `lead_id`、令牌或房源 ID。
+- 按用户已提供信息提交 `contact_name`、`contact_type`、`contact_value`、`preferred_time`、`summary`、`requirements` 及真实来源归因，不编造缺失值。稳定的宿主对话 ID 可填 `conversation_id`。
+- 同一次提交重试复用 `mutation_id`；结果不明先核对已有意向，不重复创建。仅表达兴趣但未请求承接或授权登记时不调用。
 - 以返回的 `contact_captured` 和 `message` 判断话术：已捕获联系方式才可以说明顾问会人工联系；未捕获时应引导补充联系方式，
   并可发送返回的 `supplement_form_link`。任何情况下都不能说系统已经预约成功。

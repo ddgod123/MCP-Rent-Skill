@@ -305,6 +305,9 @@ version: 0.10.1
             self.assertTrue(local_skill.exists())
             self.assertTrue(local_skill.parent.joinpath("references/tool-routing.md").exists())
             self.assertTrue(local_skill.parent.joinpath("references/response-format.md").exists())
+            for name in ("demand-intake.md", "property-filters.md", "property-results.md"):
+                with self.subTest(reference=name):
+                    self.assertTrue(local_skill.parent.joinpath("references", name).exists())
             self.assertTrue(update_script.exists())
             self.assertEqual(
                 MODULE.read_skill_metadata(local_skill.read_bytes()).name,
