@@ -450,7 +450,7 @@ class HostIsolationTests(unittest.TestCase):
             MODULE, "install_from_project"
         ) as install:
             MODULE.main()
-        install.assert_called_once_with(local, local.with_name("rentpro_skill_update.py"))
+        install.assert_called_once_with(local, local.with_name("rentpro_skill_update.py"), host="dsh")
         with self.assertRaisesRegex(MODULE.UpdateError, "同一目录"):
             MODULE.install_from_project(local, self.home / ".workbuddy/skills/rentpro-rent/rentpro_skill_update.py")
         self.assertFalse(local.exists())
@@ -458,6 +458,90 @@ class HostIsolationTests(unittest.TestCase):
     def test_invalid_env_auto_does_not_recurse(self) -> None:
         with patch.dict(os.environ, {"RENTPRO_HOST": "auto"}), self.assertRaises(MODULE.UpdateError):
             MODULE.resolve_install_target(script_path=self.repo_script)
+
+
+class HostIdentityTests(unittest.TestCase):
+    def test_identity_is_derived_from_selected_target(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(Path, "home", return_value=Path(directory)):
+            for host in MODULE.HOST_SKILL_ROOTS:
+                local = MODULE.host_skill_roots(host)[0] / "rentpro-rent/SKILL.md"
+                destination, content = MODULE.host_identity(local)
+                self.assertEqual(destination, local.parent / "references/host-identity.md")
+                self.assertIn(f"source_channel: {host}\n".encode(), content)
+                agent = "deepseek_harness" if host == "dsh" else host
+                self.assertIn(f'source_agent: "{agent}"\n'.encode(), content)
+                self.assertIn(b"trust: self_reported", content)
+
+    def test_custom_host_is_explicit_and_unknown_does_not_guess(self):
+        local = Path("/custom/rentpro-rent/SKILL.md")
+        self.assertIn(b"source_channel: cursor\n", MODULE.host_identity(local, "cursor")[1])
+        self.assertIn(b"source_channel: mcp\n", MODULE.host_identity(local, "generic")[1])
+        self.assertIn(b'source_agent: ""', MODULE.host_identity(local, "generic")[1])
+        with self.assertRaises(MODULE.UpdateError):
+            MODULE.host_identity(local, "untrusted\nsource_channel: injected")
+
+    def test_remote_manifest_cannot_supply_a_host_identity(self):
+        with self.assertRaisesRegex(MODULE.UpdateError, "本地安装目标"):
+            MODULE.safe_relative_path("references/host-identity.md")
+
+    def test_generated_identity_is_not_copied_as_a_project_resource(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "references").mkdir()
+            (root / "references/host-identity.md").write_text("source_channel: another-host")
+            self.assertNotIn("references/host-identity.md", [item[0] for item in MODULE._project_payload(root)])
+
+    def test_symlink_cannot_write_identity_outside_selected_installation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local = root / "selected/SKILL.md"
+            local.parent.mkdir()
+            other = root / "other-host"
+            other.mkdir()
+            (local.parent / "references").symlink_to(other, target_is_directory=True)
+            with self.assertRaisesRegex(MODULE.UpdateError, "当前 Skill"):
+                MODULE.host_identity(local, "dsh")
+            self.assertEqual(list(other.iterdir()), [])
+
+    def test_update_writes_identity_only_after_package_validation(self):
+        manifest, contents = release_payload("0.18.8")
+        with tempfile.TemporaryDirectory() as directory:
+            local = Path(directory) / "SKILL.md"
+            local.write_bytes(release_payload("0.18.7")[1]["SKILL.md"])
+            original = local.read_bytes()
+            with patch.object(MODULE, "_github_token", return_value=None), patch.object(
+                MODULE, "fetch_url", return_value=b"corrupt"
+            ), self.assertRaises(MODULE.UpdateError):
+                MODULE.update_installed_skill(local, manifest, 1, host="dsh")
+            self.assertEqual(local.read_bytes(), original)
+            self.assertFalse((local.parent / MODULE.HOST_IDENTITY_PATH).exists())
+            with patch.object(MODULE, "_github_token", return_value=None), patch.object(
+                MODULE, "fetch_url", side_effect=lambda url, *_: contents[url.rsplit("/", 1)[-1]]
+            ):
+                MODULE.update_installed_skill(local, manifest, 1, host="dsh")
+            identity = (local.parent / MODULE.HOST_IDENTITY_PATH).read_text()
+            self.assertIn("source_channel: dsh\n", identity)
+            self.assertEqual(local.read_bytes(), contents["SKILL.md"])
+
+    def test_identity_write_failure_rolls_back_installed_files(self):
+        manifest, contents = release_payload("0.18.8")
+        with tempfile.TemporaryDirectory() as directory:
+            local = Path(directory) / "SKILL.md"
+            original = release_payload("0.18.7")[1]["SKILL.md"]
+            local.write_bytes(original)
+            write = MODULE.atomic_write
+
+            def fail_identity(path, content, mode):
+                if path.name == "host-identity.md":
+                    raise OSError("fixture identity write failure")
+                write(path, content, mode)
+
+            with patch.object(MODULE, "_github_token", return_value=None), patch.object(
+                MODULE, "fetch_url", side_effect=lambda url, *_: contents[url.rsplit("/", 1)[-1]]
+            ), patch.object(MODULE, "atomic_write", side_effect=fail_identity), self.assertRaisesRegex(MODULE.UpdateError, "回滚"):
+                MODULE.update_installed_skill(local, manifest, 1, host="dsh")
+            self.assertEqual(local.read_bytes(), original)
+            self.assertFalse(local.with_name("install_rentpro.py").exists())
 
 
 class BootstrapTests(unittest.TestCase):

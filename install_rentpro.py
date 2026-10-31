@@ -78,7 +78,7 @@ def target_module():
     return module
 
 
-def skill_update(manifest_url: str, local_skill: Path) -> None:
+def skill_update(manifest_url: str, local_skill: Path, *, host: str = "auto") -> None:
     script = Path(__file__).with_name("rentpro_skill_update.py")
     if not script.exists():
         raise RuntimeError(f"找不到 Skill 更新器：{script}")
@@ -90,6 +90,8 @@ def skill_update(manifest_url: str, local_skill: Path) -> None:
             manifest_url,
             "--local-skill",
             str(local_skill),
+            "--host",
+            host,
             "update",
             "--yes",
         ],
@@ -250,7 +252,7 @@ def main() -> int:
             raise RuntimeError("只配置 MCP 时必须显式传 --configure-mcp")
         if args.token or args.token_file or args.token_env:
             raise RuntimeError("如需配置 MCP，请显式传 --configure-mcp")
-        skill_update(args.manifest_url, target.local_skill)
+        skill_update(args.manifest_url, target.local_skill, host=target.host)
         print(f"已安装 Skill：{DISPLAY_NAME}（未配置 MCP）")
     else:
         if not args.endpoint.startswith("https://"):
@@ -267,7 +269,7 @@ def main() -> int:
             print_generic_config(args.endpoint)
             print("当前宿主的 MCP 连接请通过其官方配置入口应用；未自动写入其他应用。")
         if not args.skip_skill:
-            skill_update(args.manifest_url, target.local_skill)
+            skill_update(args.manifest_url, target.local_skill, host=target.host)
             print(f"已安装/更新 Skill：{DISPLAY_NAME}")
     print(f"目标宿主：{target.host}；Skill 位置：{target.local_skill.parent}")
     print("安装完成。请重启或刷新宿主的 MCP/Skill 配置。")

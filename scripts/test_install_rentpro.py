@@ -43,6 +43,7 @@ class InstallRentProTests(unittest.TestCase):
         self.assertEqual(command[command.index("--manifest-url") + 1], "https://api.smartrent.xin/api/public/rentpro-install")
         self.assertNotIn("--force", command)
         self.assertEqual(command[command.index("--local-skill") + 1], "/selected-host/rentpro-rent/SKILL.md")
+        self.assertEqual(command[command.index("--host") + 1], "auto")
 
     def test_dsh_installer_passes_target_to_updater_without_touching_workbuddy(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.object(Path, "home", return_value=Path(directory)), patch(
@@ -51,7 +52,7 @@ class InstallRentProTests(unittest.TestCase):
             "sys.stdout", new_callable=io.StringIO
         ):
             self.assertEqual(MODULE.main(), 0)
-            update.assert_called_once_with(MODULE.DEFAULT_MANIFEST, Path(directory) / ".dsh/skills/rentpro-rent/SKILL.md")
+            update.assert_called_once_with(MODULE.DEFAULT_MANIFEST, Path(directory) / ".dsh/skills/rentpro-rent/SKILL.md", host="dsh")
             configure.assert_not_called()
             self.assertFalse((Path(directory) / ".workbuddy").exists())
 
@@ -60,7 +61,13 @@ class InstallRentProTests(unittest.TestCase):
             "installer", "--host", "generic", "--skill-dir", directory,
         ]), patch.object(MODULE, "skill_update") as update, patch("sys.stdout", new_callable=io.StringIO):
             self.assertEqual(MODULE.main(), 0)
-            update.assert_called_once_with(MODULE.DEFAULT_MANIFEST, Path(directory) / "SKILL.md")
+            update.assert_called_once_with(MODULE.DEFAULT_MANIFEST, Path(directory) / "SKILL.md", host="generic")
+
+    def test_installer_preserves_explicit_host_for_custom_directory(self) -> None:
+        with patch.object(MODULE.subprocess, "run") as run:
+            MODULE.skill_update(MODULE.DEFAULT_MANIFEST, Path("/selected/custom/SKILL.md"), host="cursor")
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("--host") + 1], "cursor")
 
     def test_no_host_does_not_default_to_workbuddy(self) -> None:
         with patch.dict(os.environ, {}, clear=True), patch("sys.argv", ["installer"]), patch.object(

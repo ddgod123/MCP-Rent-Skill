@@ -56,6 +56,7 @@ VERSION_RE = re.compile(r"^[vV]?([0-9]+)\.([0-9]+)\.([0-9]+)$")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 IMMUTABLE_REF_RE = re.compile(r"^(?:[0-9a-f]{40}|rentpro-rent-v[0-9]+\.[0-9]+\.[0-9]+)$")
 UPDATE_AVAILABLE_EXIT = 2
+HOST_IDENTITY_PATH = "references/host-identity.md"
 
 
 class UpdateError(RuntimeError):
@@ -311,6 +312,8 @@ def safe_relative_path(value: str) -> str:
     normalized = str(path)
     if normalized != value:
         raise UpdateError(f"manifest 文件路径必须使用规范相对路径：{value!r}")
+    if normalized == HOST_IDENTITY_PATH:
+        raise UpdateError("host-identity.md 只能由本地安装目标生成，不能从发布包覆盖")
     return normalized
 
 
@@ -659,11 +662,39 @@ def _restore_written(written: list[Path], backups: list[Path]) -> None:
                 pass
 
 
+def host_identity(local_path: Path, host: str | None = None) -> tuple[Path, bytes]:
+    selected = normalize_host(host)
+    if selected == "auto":
+        selected = host_for_path(local_path)
+    if selected not in {"generic", *HOST_SKILL_ROOTS}:
+        raise UpdateError("无法为未知宿主生成归因标识")
+    detected = host_for_path(local_path)
+    if detected != "generic" and selected not in {"generic", detected}:
+        raise UpdateError("归因宿主与实际安装目录不一致")
+    destination = local_path.parent / HOST_IDENTITY_PATH
+    if not destination.resolve().is_relative_to(local_path.parent.resolve()):
+        raise UpdateError("host-identity.md 必须位于当前 Skill 安装目录内")
+    known = selected != "generic"
+    agent = "deepseek_harness" if selected == "dsh" else selected if known else ""
+    content = (
+        "---\n"
+        f"source_channel: {selected if known else 'mcp'}\n"
+        f"source_agent: {json.dumps(agent)}\n"
+        "trust: self_reported\n"
+        "---\n\n"
+        "Generated for this local installation only. Not authentication or billing evidence.\n"
+    ).encode("utf-8")
+    return destination, content
+
+
 def update_installed_skill(
     local_path: Path,
     manifest: dict,
     timeout: float,
+    *,
+    host: str | None = None,
 ) -> Path | list[Path] | None:
+    identity_path, identity_content = host_identity(local_path, host)
     token = _github_token()
     downloaded: dict[str, tuple[ManifestFile, bytes]] = {}
 
@@ -719,6 +750,11 @@ def update_installed_skill(
                 backups.append(previous)
             atomic_write(destination, content, _file_mode(destination, item.role))
             written.append(destination)
+        previous = backup_path(identity_path)
+        if previous:
+            backups.append(previous)
+        atomic_write(identity_path, identity_content, 0o644)
+        written.append(identity_path)
     except (OSError, UpdateError) as exc:
         _restore_written(written, backups)
         raise UpdateError(f"本地 Skill 包写入失败，已尽量回滚：{exc}") from exc
@@ -732,7 +768,7 @@ def _project_payload(source_dir: Path) -> list[tuple[str, Path, str]]:
     references = source_dir / "references"
     if references.is_dir():
         for source in sorted(references.glob("*.md")):
-            if source.name == "README.md":
+            if source.name in {"README.md", "host-identity.md"}:
                 continue
             payload.append((f"references/{source.name}", source, "reference"))
     manifest = source_dir / "rentpro_skill_release.json"
@@ -741,7 +777,8 @@ def _project_payload(source_dir: Path) -> list[tuple[str, Path, str]]:
     return payload
 
 
-def install_from_project(local_path: Path, update_script_path: Path) -> list[Path]:
+def install_from_project(local_path: Path, update_script_path: Path, *, host: str | None = None) -> list[Path]:
+    identity_path, identity_content = host_identity(local_path, host)
     if update_script_path.absolute() != local_path.with_name("rentpro_skill_update.py").absolute():
         raise UpdateError("更新器必须与目标 SKILL.md 安装在同一目录，不能写入其他宿主")
     source = next(
@@ -781,6 +818,11 @@ def install_from_project(local_path: Path, update_script_path: Path) -> list[Pat
                 _file_mode(destination, role),
             )
             written.append(destination)
+        previous = backup_path(identity_path)
+        if previous:
+            backups.append(previous)
+        atomic_write(identity_path, identity_content, 0o644)
+        written.append(identity_path)
     except (OSError, UpdateError) as exc:
         _restore_written(written, backups)
         raise UpdateError(f"项目 Skill 安装失败，已尽量回滚：{exc}") from exc
@@ -825,6 +867,7 @@ def command_update(args: argparse.Namespace) -> int:
         args.local_skill,
         status["_manifest"],
         args.timeout,
+        host=getattr(args, "host", None),
     )
     print(
         f"已更新 {status['display_name']} 到 {status['latest_version']}："
@@ -837,7 +880,7 @@ def command_update(args: argparse.Namespace) -> int:
 
 
 def command_install(args: argparse.Namespace) -> int:
-    install_from_project(args.local_skill, args.update_script)
+    install_from_project(args.local_skill, args.update_script, host=getattr(args, "host", None))
     return 0
 
 
