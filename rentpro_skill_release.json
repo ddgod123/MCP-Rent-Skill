@@ -61,7 +61,7 @@
       "role": "updater",
       "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.17/rentpro_skill_update.py",
       "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.17",
-      "sha256": "bcaa4b267463fae5f27b221c37f82b45eda04240c53d507867ec3826062d8a1a"
+      "sha256": "13ae94b332e07318b6dc6f3625ab4f988da65a6c56e1d2adebc959960551c80f"
     },
     {
       "path": "install_rentpro.py",
@@ -78,5 +78,5 @@
       "sha256": "3d383aacb40c6ae0aed94169ee9a7556be906c91d4db162b4b82797688b7e430"
     }
   ],
-  "release_notes": "本地候选：宿主归因标识、留资归因与按需详情投影；尚未发布。"
+  "release_notes": "本地候选：宿主归因标识、留资归因与按需详情投影；补齐本地安装包和按需更新说明；尚未发布。"
 }

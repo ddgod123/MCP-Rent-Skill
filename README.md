@@ -56,8 +56,8 @@ python3 install_rentpro.py --host generic --skill-dir /absolute/path/to/skills/r
 
 ## 检查更新
 
-每个新会话首次加载时，宿主调用只读工具 `check_rentpro_skill_update` 比较已加载版本。
-发现新版后通过统一安装地址更新当前副本，不在每轮租房咨询中重复检查。
+仅当用户主动选择菜单 9（检查更新）时，宿主调用只读工具 `check_rentpro_skill_update` 比较已加载版本。
+发现新版后，经用户确认，通过统一安装地址更新当前副本；不在新会话或每轮租房咨询中自动检查。
 
 安装目录中的新版更新器自动检查、更新自身同目录的 Skill，例如：
 

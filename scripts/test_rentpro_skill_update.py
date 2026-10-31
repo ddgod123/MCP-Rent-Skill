@@ -314,6 +314,17 @@ version: 0.10.1
                 "rentpro-rent",
             )
 
+    def test_local_install_contains_every_manifest_file_with_matching_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch("sys.stdout", new_callable=io.StringIO):
+            target = Path(directory) / "rentpro-rent/SKILL.md"
+            MODULE.install_from_project(target, target.with_name("rentpro_skill_update.py"), host="generic")
+            manifest = json.loads(target.with_name("rentpro_skill_release.json").read_text())
+            for item in manifest["files"]:
+                with self.subTest(path=item["path"]):
+                    installed = target.parent / item["path"]
+                    self.assertTrue(installed.is_file(), f"missing installed file: {item['path']}")
+                    self.assertEqual(MODULE.sha256_bytes(installed.read_bytes()), item["sha256"])
+
     def test_manifest_rejects_unsafe_relative_paths(self) -> None:
         with self.assertRaises(MODULE.UpdateError):
             MODULE.manifest_files(

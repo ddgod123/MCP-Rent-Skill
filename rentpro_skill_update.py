@@ -774,6 +774,12 @@ def _project_payload(source_dir: Path) -> list[tuple[str, Path, str]]:
     manifest = source_dir / "rentpro_skill_release.json"
     if manifest.exists():
         payload.append(("rentpro_skill_release.json", manifest, "manifest"))
+    for name, role in (("install_rentpro.py", "installer"), ("install_rentpro.sh", "bootstrap")):
+        source = source_dir / name
+        if not source.is_file():
+            source = SCRIPT_DIR / name
+        if source.is_file():
+            payload.append((name, source, role))
     return payload
 
 
