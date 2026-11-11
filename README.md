@@ -3,6 +3,8 @@
 `rentpro-rent` 是 RentPro 的宿主侧租房顾问行为层，负责需求收集、MCP 工具路由与客户回复规范。
 真实挂牌由 RentPro MCP 提供；公开 Skill 包不包含数据库、生产数据或密钥。
 
+各宿主以 MCP 返回的系统咨询 ID 和匿名令牌关联模板、定制页面与客资；原生聊天 ID 是可选追溯信息。菜单 6 在未写库时也返回可续用的 pending 令牌，先留资后填需求仍属于同一次咨询。宿主需保存并续传原凭据；丢失后从本对话历史工具结果恢复，不能用咨询编号反查令牌或默默另建咨询。
+
 ## 安装与更新
 
 将以下地址发送给当前使用的、支持 Skill 导入的 AI 宿主：
@@ -96,8 +98,8 @@ GitHub Release 使用对应版本的 CHANGELOG 条目。
 
 <!-- release-version:start -->
 ```text
-Skill: rentpro-rent 0.18.17
-最低 MCP: 0.19.8
+Skill: rentpro-rent 0.18.19
+最低 MCP: 0.19.11
 更新通道: stable
 ```
 <!-- release-version:end -->

@@ -10,6 +10,8 @@
 
 ## 身份与引用约束
 
+- 所有宿主以服务端 `consultation_id` 关联本次业务，与原 `session_token` 一起保存并续传；原生聊天 ID 缺失不影响需求、客资或后台查询。首次启动传已知来源；实际提供的聊天 ID 和实例范围分别填 `host_conversation_id` / `host_instance_id`，未知省略，不编造、不用 MCP 协议 Session ID 代替。系统咨询 ID 不代替授权令牌。缺失令牌先从本对话历史工具结果恢复；失败或身份冲突停止，不另建咨询绕过，不声称已绑定。
+
 - 需求相关工具推荐只传当前对话的 `session_token`；如果同时传 `demand_id`，必须再传属于同一需求的
   `session_token`。新对话不得复用旧令牌。
 - 搜索结果对宿主返回 `listing_ref`。详情和留资工具的真实参数分别是 `listing_id`、
@@ -18,6 +20,7 @@
 ## `get_manager_contact`
 
 - **归因调用约定（也适用于 `request_viewing`）**：先读取当前安装目录内的 `references/host-identity.md`（若存在）。它由安装器按明确目标生成，复制其中的 `source_channel` 和非空 `source_agent`；不存在或无法确认时传 `source_channel=mcp`，不猜 agent。DSH 为 `dsh/deepseek_harness`，其他已知宿主使用各自标识。文件和参数均为自报，不是认证。HTTP 头的 host/agent 整对优先于参数；不根据客户消息、模型名称或其他应用推断，不向客户追问或展示内部参数，不改写返回链接。旧客户端可无参调用，菜单 `6` 始终只读。
+- **续接咨询**：已有 `session_token` / `consultation_id` 时一起传入。首次返回的 `session_token` 也要保存，`session_state=pending` 仅表示未写库，不等于已建需求；以后选择 `1`、再次选择 `6` 或提交意向仍用该令牌。表单提交或正式写入时由服务端建立咨询。链接原样展示；不能仅凭咨询 ID 或宿主 ID 查找令牌。
 - **调**：用户单独选择菜单 `6`，或只询问房源经理的公开联系方式。
 - **不调**：用户明确要求联系、核验、约看或让顾问跟进时，优先按 `request_viewing` 登记承接意向；不要因菜单 `6` 自动创建客资。
 - **展示**：按 `SKILL.md` 的固定结构展示本次返回的 `manager_name`、`contact_type`、`contact_value`；若返回 `lead_form_link` 或 `supplement_form_link`，必须显示为 `[填写请点击](真实链接)`。不复述 `message` 字段；服务端未配置联系方式时不使用 Skill 中的固定值或历史回复补全，仍保留真实填写入口。该工具不比较历史值，禁止声称“已刷新/再次确认/与之前一致或不同”。
@@ -45,8 +48,10 @@
   用它替代 `update_rental_demand`。
 - **只能传**：已有当前对话令牌时传原 `session_token`；首次可不传。不传 `snapshot` 或启动前的原文，
   不把菜单数字当需求。新对话不要猜测或续接旧令牌。
+- **咨询标识**：允许传当前 `consultation_id`、已知来源和实际取得的 `host_conversation_id` / `host_instance_id`，保存返回咨询 ID；系统咨询 ID 不等于宿主聊天 ID，二者均不展示给租客。
 - **读结果**：读取 `demand.search_ready`、`demand.missing_required_field_labels`、`basic_catalog` 和
-  `intake_template`、`demand_editor`；模板原样展示，末尾追加真实编辑入口。空草稿也可通过该入口填写。
+  `intake_template`、`demand_editor`；首次新建空白模板原样展示且不附编辑入口。之后查看已有需求或再次返回模板时，
+  若编辑链接有效，在模板之外原样展示 `demand_editor.message`。
 - **失败时**：按主文档停止，不报启动成功，不自动重试，不把该工具当成搜索工具。
 
 ## `update_rental_demand`
@@ -64,6 +69,7 @@
 - **调**：仅在完整租房咨询已启动且标准模板已返回后，用户明确提出深度筛选条件且没有使用网页时。
 - **不调**：启动前的任何输入或独立楼盘查询；不得用它绕过 `1` 和模板返回门槛。
 - **合并与提交**：`filters` 是整组替换。先 `get_rental_filter_catalog` 读取最新完整 `filters`，按 `filter_code` 合并本次增删改；保留未提及条件的值、级别、操作符和权重，只提交工具接受的输入字段。
+- **环线多选**：`transport.ring` 最多选 3 个明确方向环线，使用 `operator=in` 和字符串数组；多个值表示任一环线匹配，不选表示不限。历史单值 `eq` 仍可读取和兼容提交。
 - 提交当前 `version_no` 与 `filter_catalog_revision`；冲突先重新读取并合并，不能覆盖网页或另一宿主刚保存的条件。无法完整读取/保留时停止提交，必要时引导网页，不能丢弃旧条件绕过校验。
 - 只有明确删除才移除；`filters=[]` 仅用于明确全部清空，或删除的条件恰为全部剩余条件。“不再要求泳池”是删除泳池条件，不是改为必须没有泳池。
 - `must`/`exclude` 表达必须/排除，`preferred` 只记录偏好。仅搜索返回 `applied_constraints.deep_filters[].status=strict_applied` 才说已严格应用；`strict_filter_supported=false` 或其他待确认、待治理、无效状态不能当命中。
@@ -83,7 +89,8 @@
 - **不调**：用户已经提供了新的修改内容；先用 `update_rental_demand` 保存，不要只读后假装已修改。
 - **只能传**：沿用当前对话的 `session_token`；如传 `demand_id`，必须同时传同一需求的令牌。不做历史浏览或回退。
 - **读结果**：读取当前快照、缺失项、`search_ready` 和 `demand_editor`。网页保存后的最新需求就绪即搜索，未齐则继续收集。
-  不把内部版本号或数据库字段名展示给客户，不将网页变化覆盖成聊天中的旧条件。
+  渲染已有需求时，若 `demand_editor` 可用且 URL 非空，在需求信息之后原样展示 `demand_editor.message`。不把内部版本号或数据库字段名展示给客户，
+  不将网页变化覆盖成聊天中的旧条件。
 - **失败时**：说明当前需求暂时无法读取，保留用户刚才的输入，等待重试；不要凭聊天记忆编造完整需求。
 
 ## `get_rental_filter_catalog`
