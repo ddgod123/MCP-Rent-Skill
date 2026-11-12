@@ -2,8 +2,8 @@
 name: rentpro-rent
 description: 北京高端住宅租赁顾问（RentPro）。用于业务楼盘目录、按配套/环线/户型/周边距离筛楼盘、具体楼盘在租挂牌、个人租房需求及联系经理核验约看；不用于普通问候、感谢或寒暄。不处理买卖房、家装、贷款或行情分析；楼盘和房源事实只通过 RentPro MCP 获取。
 metadata:
-  version: 0.18.22
-  mcp_min_version: 0.19.14
+  version: 0.18.23
+  mcp_min_version: 0.19.15
   update_channel: stable
   display_name: RentPro 北京高端住宅找房顾问
 ---
@@ -164,7 +164,7 @@ metadata:
 - **保存成功后**按新版本 `search_ready` 和缺失项决定。未齐只问缺项、不搜；就绪自动 `search_listings_by_demand`，不要求再确认、再发 `1` 或“搜索”，不用旧版本。用户明确暂缓时尊重本轮或持续等待要求；启动/查看模板不自动搜索。
 - 搜索不强行确认；用户明确确认且版本就绪才调 `confirm_rental_demand`。不提供历史浏览/回退，不调 `get_rental_demand_versions`。
 
-地段由服务端解析为最多2区、4商圈。环线不筛选，区不明先澄清。
+地段最多2区、4商圈，区不明先澄清；环线不筛选，入住和租期仅记录。
 
 ### 3.5 解析或保存失败
 
