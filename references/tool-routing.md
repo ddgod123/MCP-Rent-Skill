@@ -50,8 +50,7 @@
   不把菜单数字当需求。新对话不要猜测或续接旧令牌。
 - **咨询标识**：允许传当前 `consultation_id`、已知来源和实际取得的 `host_conversation_id` / `host_instance_id`，保存返回咨询 ID；系统咨询 ID 不等于宿主聊天 ID，二者均不展示给租客。
 - **读结果**：读取 `demand.search_ready`、`demand.missing_required_field_labels`、`basic_catalog` 和
-  `intake_template`、`template_mode`；`initial_blank` 时仅原样展示模板，不追加提示、链接或按钮，也不另调工具索取或从历史恢复链接。该响应不含 `demand_editor`。之后查看已有需求或再次返回模板时，
-  若编辑链接有效，在模板之外原样展示 `demand_editor.message`。
+  `intake_template`、`template_mode`；每次均为 `blank_intake`，只原样发空白模板，不附定制页提示/链接/按钮、不另发或另取链接、不从历史补链。响应无 `demand_editor`。已有需求再选 `1` 用 `render_rental_demand_template`；明确重领空表才续接本工具，不清空旧值。
 - **失败时**：按主文档停止，不报启动成功，不自动重试，不把该工具当成搜索工具。
 
 ## `update_rental_demand`
@@ -89,7 +88,7 @@
 - **不调**：用户已经提供了新的修改内容；先用 `update_rental_demand` 保存，不要只读后假装已修改。
 - **只能传**：沿用当前对话的 `session_token`；如传 `demand_id`，必须同时传同一需求的令牌。不做历史浏览或回退。
 - **读结果**：读取当前快照、缺失项、`search_ready` 和 `demand_editor`。网页保存后的最新需求就绪即搜索，未齐则继续收集。
-  渲染已有需求时，若 `demand_editor` 可用且 URL 非空，在需求信息之后原样展示 `demand_editor.message`。不把内部版本号或数据库字段名展示给客户，
+  渲染为 `blank_intake` 只发空白 `template`；`saved_demand` 展示已填需求（含部分填写）及本次有效 `demand_editor.message`。明确要网页编辑可用 `get_rental_demand` 取原需求链接，不为给空表补链调用它。不展示内部版本号或字段名，
   不将网页变化覆盖成聊天中的旧条件。
 - **失败时**：说明当前需求暂时无法读取，保留用户刚才的输入，等待重试；不要凭聊天记忆编造完整需求。
 
