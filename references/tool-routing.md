@@ -50,7 +50,7 @@
   不把菜单数字当需求。新对话不要猜测或续接旧令牌。
 - **咨询标识**：允许传当前 `consultation_id`、已知来源和实际取得的 `host_conversation_id` / `host_instance_id`，保存返回咨询 ID；系统咨询 ID 不等于宿主聊天 ID，二者均不展示给租客。
 - **读结果**：读取 `demand.search_ready`、`demand.missing_required_field_labels`、`basic_catalog` 和
-  `intake_template`、`demand_editor`；首次新建空白模板原样展示且不附编辑入口。之后查看已有需求或再次返回模板时，
+  `intake_template`、`template_mode`；`initial_blank` 时仅原样展示模板，不追加提示、链接或按钮，也不另调工具索取或从历史恢复链接。该响应不含 `demand_editor`。之后查看已有需求或再次返回模板时，
   若编辑链接有效，在模板之外原样展示 `demand_editor.message`。
 - **失败时**：按主文档停止，不报启动成功，不自动重试，不把该工具当成搜索工具。
 

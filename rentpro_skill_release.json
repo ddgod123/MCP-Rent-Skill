@@ -2,81 +2,81 @@
   "schema_version": 2,
   "skill_name": "rentpro-rent",
   "display_name": "RentPro 北京高端住宅找房顾问",
-  "latest_version": "0.18.20",
-  "mcp_min_version": "0.19.12",
+  "latest_version": "0.18.21",
+  "mcp_min_version": "0.19.13",
   "update_channel": "stable",
   "skill_path": "SKILL.md",
-  "source_ref": "rentpro-rent-v0.18.20",
-  "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/SKILL.md",
-  "primary_manifest_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/rentpro_skill_release.json",
+  "source_ref": "rentpro-rent-v0.18.21",
+  "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/SKILL.md",
+  "primary_manifest_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/rentpro_skill_release.json",
   "fallback_manifest_urls": [
-    "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_release.json?ref=rentpro-rent-v0.18.20"
+    "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_release.json?ref=rentpro-rent-v0.18.21"
   ],
-  "sha256": "17d1325443bb3efee5066debbeca855c5e9a12017dfdd0427dd6d25db744d1c2",
+  "sha256": "79cce452baced3dbcf394bff6361fcfa7b19cacc1c26636c4153e7b48732bca4",
   "files": [
     {
       "path": "SKILL.md",
       "role": "skill",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/SKILL.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.20",
-      "sha256": "17d1325443bb3efee5066debbeca855c5e9a12017dfdd0427dd6d25db744d1c2"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/SKILL.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/SKILL.md?ref=rentpro-rent-v0.18.21",
+      "sha256": "79cce452baced3dbcf394bff6361fcfa7b19cacc1c26636c4153e7b48732bca4"
     },
     {
       "path": "references/demand-intake.md",
       "role": "reference",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/references/demand-intake.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/demand-intake.md?ref=rentpro-rent-v0.18.20",
-      "sha256": "115a2a7b12fbd4698ef9fcdcaaa23a7bac6dac7e0b96505d9a6c20ef5f502c07"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/references/demand-intake.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/demand-intake.md?ref=rentpro-rent-v0.18.21",
+      "sha256": "a47a88a4f817b8f6d2c6d99386771af55a9ed5806260fad001b301047ba2225b"
     },
     {
       "path": "references/property-filters.md",
       "role": "reference",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/references/property-filters.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/property-filters.md?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/references/property-filters.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/property-filters.md?ref=rentpro-rent-v0.18.21",
       "sha256": "f5066a57c2372f7283584a45117981bbb6f2b63d70b87a91f561e469ec04c7eb"
     },
     {
       "path": "references/property-results.md",
       "role": "reference",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/references/property-results.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/property-results.md?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/references/property-results.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/property-results.md?ref=rentpro-rent-v0.18.21",
       "sha256": "c633d28e9617b4bb8ccd3cd53ed57d79a7af439a1b1a2beee5f8b91497fc0b52"
     },
     {
       "path": "references/response-format.md",
       "role": "reference",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/references/response-format.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/references/response-format.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/response-format.md?ref=rentpro-rent-v0.18.21",
       "sha256": "9ed5932882bd27530be2a042e25a86568617f6fac9adfb151b777b19229337dd"
     },
     {
       "path": "references/tool-routing.md",
       "role": "reference",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/references/tool-routing.md",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=rentpro-rent-v0.18.20",
-      "sha256": "3e502956713ccf598928a8fdc49fa682780d72cb0de8bdf6ff85893ce1d14428"
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/references/tool-routing.md",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/references/tool-routing.md?ref=rentpro-rent-v0.18.21",
+      "sha256": "34445a5388f5200c0b51e9635710581c4b5b6925bb2962555c77ca33fa64e42a"
     },
     {
       "path": "rentpro_skill_update.py",
       "role": "updater",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/rentpro_skill_update.py",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/rentpro_skill_update.py",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/rentpro_skill_update.py?ref=rentpro-rent-v0.18.21",
       "sha256": "13ae94b332e07318b6dc6f3625ab4f988da65a6c56e1d2adebc959960551c80f"
     },
     {
       "path": "install_rentpro.py",
       "role": "installer",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/install_rentpro.py",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.py?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/install_rentpro.py",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.py?ref=rentpro-rent-v0.18.21",
       "sha256": "7043a8a74545842ac2a3ff5a921f4618a758d4688e98698f31136b43e9640ea3"
     },
     {
       "path": "install_rentpro.sh",
       "role": "bootstrap",
-      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.20/install_rentpro.sh",
-      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.sh?ref=rentpro-rent-v0.18.20",
+      "download_url": "https://smartrent.xin/skill/rentpro-rent/v0.18.21/install_rentpro.sh",
+      "fallback_download_url": "https://api.github.com/repos/ddgod123/MCP-Rent-Skill/contents/install_rentpro.sh?ref=rentpro-rent-v0.18.21",
       "sha256": "3d383aacb40c6ae0aed94169ee9a7556be906c91d4db162b4b82797688b7e430"
     }
   ],
-  "release_notes": "个人租房需求按行政区和商圈匹配，环线不再参与。"
+  "release_notes": "首次空白模板只返回模板正文，后续需求编辑入口保留。"
 }
