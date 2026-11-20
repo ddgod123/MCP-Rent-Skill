@@ -1,5 +1,7 @@
 # RentPro 北京高端住宅找房顾问
 
+> 维护入口更新（2026-11-21）：最新维护文档与发布源码见 [`release/mcp-host-listing-20261101`](https://github.com/ddgod123/MCP-Rent-Skill/tree/release/mcp-host-listing-20261101)。本 `main` 的安装包、manifest 和下方版本区块仍对应本分支快照；此提示不修改旧包或发布新版本。安装或检查当前稳定版本请使用[统一安装入口](https://api.smartrent.xin/api/public/rentpro-install)，不要仅凭默认分支版本判断线上最新版。
+
 `rentpro-rent` 是 RentPro 的宿主侧租房顾问行为层，负责需求收集、MCP 工具路由与客户回复规范。
 真实挂牌由 RentPro MCP 提供；公开 Skill 包不包含数据库、生产数据或密钥。
 
